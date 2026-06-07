@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS SOLUTIONS — Personnel Dossier (D&D 5.5e)</title>
+<link rel="stylesheet" href="styles.css?v=20260606d">
+</head>
+<body>
+
+<!-- ===================== SCREEN TOOLBAR ===================== -->
+<div class="toolbar">
+  <span class="brand">AEGIS <b>SOLUTIONS</b></span>
+  <span class="hint">Personnel Dossier · D&D 5.5e · A4 × 4</span>
+  <span class="spacer"></span>
+  <span class="hint">Fields autosave · duplicates mirror</span>
+  <span class="hint" id="cloudStatus">Local autosave</span>
+  <button id="exportBtn">Export Save</button>
+  <button id="importBtn">Import Save</button>
+  <input id="importFile" type="file" accept="application/json" hidden>
+  <button id="printBtn">Print / PDF</button>
+  <button id="resetBtn">Clear all</button>
+</div>
+
+<!-- ============================================================
+     PAGE 1 — OPERATIVE RECORD
+     Identity header · Stat band · 3-column body · Conditions strip
+     Panels: active (red) = combat/play  |  ref (steel) = reference
+     ============================================================ -->
+<section class="page" data-screen-label="Page 1 — Operative Record">
+ <svg class="watermark" viewBox="0 0 40 44"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" fill="currentColor"/></svg>
+ <div class="page-frame">
+
+  <!-- ── IDENTITY HEADER ─────────────────────────────────────── -->
+  <div class="main-top" style="flex:0 0 auto;">
+
+    <!-- left: name (grows) + species / size -->
+    <div class="side">
+      <div class="field hero">
+        <span class="lbl">Name</span>
+        <div class="fbox bigname" contenteditable data-k="p1.name" data-ph="Operative name"></div>
+      </div>
+      <div class="idsplit">
+        <div class="field" style="flex:1;min-width:0;"><span class="lbl">Species / Ancestry</span><div class="fbox" contenteditable data-k="p1.species" style="font-weight:700;font-size:15px;text-align:center;"></div></div>
+        <div class="field" style="flex:0 0 56px;"><span class="lbl">Size</span><div class="fbox" contenteditable data-k="p1.size" style="text-align:center;font-weight:700;" data-ph="—"></div></div>
+      </div>
+    </div>
+
+    <!-- center: crest + HP matrix + death saves -->
+    <div class="center-crest">
+      <svg class="emblem-lg" viewBox="0 0 40 44" fill="none"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" stroke="currentColor" stroke-width="2"/><path d="M20 11 L28 31 H23.2 L20 22.5 L16.8 31 H12 Z" fill="currentColor"/></svg>
+      <div class="ttl">AEGIS SOLUTIONS</div>
+      <div class="sub2">Bounty Acquisition Division</div>
+      <div class="cline"></div>
+      <div class="hpmatrix">
+        <div class="stat active"><span class="lbl">Max HP</span><div class="val" contenteditable data-k="p1.maxhp"></div></div>
+        <div class="stat active"><span class="lbl">Current HP</span><div class="val" contenteditable data-k="p1.curhp"></div></div>
+        <div class="stat ref"><span class="lbl">Temp HP</span><div class="val" contenteditable data-k="p1.temphp"></div></div>
+        <div class="stat ref"><span class="lbl">Hit Dice</span><div class="val" contenteditable data-k="p1.hitdice"></div></div>
+      </div>
+      <div class="deaths">
+        <span class="dtitle">Death Saves</span>
+        <div class="grp"><span class="lbl">Succ</span><div class="dots"><button class="dot ok" data-t="p1.death.ok1"></button><button class="dot ok" data-t="p1.death.ok2"></button><button class="dot ok" data-t="p1.death.ok3"></button></div></div>
+        <div class="grp"><span class="lbl">Fail</span><div class="dots"><button class="dot fail" data-t="p1.death.f1"></button><button class="dot fail" data-t="p1.death.f2"></button><button class="dot fail" data-t="p1.death.f3"></button></div></div>
+      </div>
+    </div>
+
+    <!-- right: class / level (grows) + background / XP -->
+    <div class="side">
+      <div class="idsplit">
+        <div class="field" style="flex:1;min-width:0;"><span class="lbl">Class(es) &amp; Subclass</span><div class="fbox" contenteditable data-k="p1.classlevel" style="font-size:13px;font-weight:700;text-align:center;line-height:1.2;" data-ph="Monk · Open Hand · or Bard 3 / Sorc 1"></div></div>
+        <div class="field" style="flex:0 0 50px;"><span class="lbl">Lvl</span><div class="fbox" contenteditable data-k="p1.level" style="text-align:center;font-weight:700;font-size:17px;" data-ph="—"></div></div>
+      </div>
+      <div class="idsplit">
+        <div class="field" style="flex:1;min-width:0;"><span class="lbl">Background</span><div class="fbox" contenteditable data-k="p1.background" style="font-size:14px;font-weight:700;text-align:center;"></div></div>
+        <div class="field" style="flex:0 0 76px;"><span class="lbl">XP</span><div class="fbox" contenteditable data-k="p1.xp" style="text-align:center;font-weight:600;" data-ph="—"></div></div>
+      </div>
+    </div>
+
+  </div><!-- /main-top -->
+
+  <!-- ── STAT BAND ──────────────────────────────────────────── -->
+  <!-- Single rule: all combat stats in one cohesive bar        -->
+  <div class="statbar">
+    <div class="sb-cell"><span class="lbl">Armor Class</span><div class="sb-val" contenteditable data-k="p1.ac"></div></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell"><span class="lbl">Initiative</span><div class="sb-val" contenteditable data-k="p1.init"></div></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell"><span class="lbl">Speed</span><div class="sb-val" contenteditable data-k="p1.speed"></div></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell"><span class="lbl">Pass. Perception</span><div class="sb-val" contenteditable data-k="p1.passive"></div></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell"><span class="lbl">Prof. Bonus</span><div class="sb-val" contenteditable data-k="p1.prof"></div></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell sb-inspo"><span class="lbl">Inspiration</span><button class="dot lg" data-t="p1.inspo"></button></div>
+    <div class="sb-sep"></div>
+    <div class="sb-cell sb-exh">
+      <span class="lbl">Exhaustion</span>
+      <div class="exh-track">
+        <button class="epip" data-t="p1.exh.1">1</button><button class="epip" data-t="p1.exh.2">2</button><button class="epip" data-t="p1.exh.3">3</button><button class="epip" data-t="p1.exh.4">4</button><button class="epip" data-t="p1.exh.5">5</button><button class="epip" data-t="p1.exh.6">6</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3-COLUMN BODY ──────────────────────────────────────── -->
+  <div class="row grow" style="min-height:0;">
+
+    <!-- LEFT — Abilities & Skills + Senses -->
+    <div class="col" style="width:180px;">
+      <div class="panel ref grow" style="min-height:0;">
+      <div class="panel-h"><span class="sect-title">Abilities &amp; Skills</span></div>
+      <div class="panel-body" style="padding:0;gap:0;overflow:hidden;">
+        <div class="ablist">
+
+          <!-- STR -->
+          <div class="ab-blk" style="flex:2.4;">
+            <span class="ab-vname">STR</span>
+            <div class="ab-body">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.str.score"></div><div class="ab-mod" contenteditable data-k="p1.str.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.str.savep"></button><div class="sbox" contenteditable data-k="p1.str.save"></div></div></div>
+              <div class="sklist"><div class="sk-row"><button class="dot sm" data-t="p1.sk.athl.p"></button><button class="dot sm exp" data-t="p1.sk.athl.e"></button><span class="sn">Athletics</span><div class="mb" contenteditable data-k="p1.sk.athl.m"></div></div></div>
+            </div>
+          </div>
+
+          <!-- DEX -->
+          <div class="ab-blk" style="flex:4;">
+            <span class="ab-vname">DEX</span>
+            <div class="ab-body">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.dex.score"></div><div class="ab-mod" contenteditable data-k="p1.dex.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.dex.savep"></button><div class="sbox" contenteditable data-k="p1.dex.save"></div></div></div>
+              <div class="sklist">
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.acro.p"></button><button class="dot sm exp" data-t="p1.sk.acro.e"></button><span class="sn">Acrobatics</span><div class="mb" contenteditable data-k="p1.sk.acro.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.slei.p"></button><button class="dot sm exp" data-t="p1.sk.slei.e"></button><span class="sn">Sleight of Hand</span><div class="mb" contenteditable data-k="p1.sk.slei.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.stea.p"></button><button class="dot sm exp" data-t="p1.sk.stea.e"></button><span class="sn">Stealth</span><div class="mb" contenteditable data-k="p1.sk.stea.m"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CON — no skills; fields centered in minimal block -->
+          <div class="ab-blk" style="flex:1.4;">
+            <span class="ab-vname">CON</span>
+            <div class="ab-body" style="justify-content:center;">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.con.score"></div><div class="ab-mod" contenteditable data-k="p1.con.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.con.savep"></button><div class="sbox" contenteditable data-k="p1.con.save"></div></div></div>
+            </div>
+          </div>
+
+          <!-- INT -->
+          <div class="ab-blk" style="flex:5.6;">
+            <span class="ab-vname">INT</span>
+            <div class="ab-body">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.int.score"></div><div class="ab-mod" contenteditable data-k="p1.int.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.int.savep"></button><div class="sbox" contenteditable data-k="p1.int.save"></div></div></div>
+              <div class="sklist">
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.arca.p"></button><button class="dot sm exp" data-t="p1.sk.arca.e"></button><span class="sn">Arcana</span><div class="mb" contenteditable data-k="p1.sk.arca.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.hist.p"></button><button class="dot sm exp" data-t="p1.sk.hist.e"></button><span class="sn">History</span><div class="mb" contenteditable data-k="p1.sk.hist.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.inve.p"></button><button class="dot sm exp" data-t="p1.sk.inve.e"></button><span class="sn">Investigation</span><div class="mb" contenteditable data-k="p1.sk.inve.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.natu.p"></button><button class="dot sm exp" data-t="p1.sk.natu.e"></button><span class="sn">Nature</span><div class="mb" contenteditable data-k="p1.sk.natu.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.reli.p"></button><button class="dot sm exp" data-t="p1.sk.reli.e"></button><span class="sn">Religion</span><div class="mb" contenteditable data-k="p1.sk.reli.m"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- WIS -->
+          <div class="ab-blk" style="flex:5.6;">
+            <span class="ab-vname">WIS</span>
+            <div class="ab-body">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.wis.score"></div><div class="ab-mod" contenteditable data-k="p1.wis.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.wis.savep"></button><div class="sbox" contenteditable data-k="p1.wis.save"></div></div></div>
+              <div class="sklist">
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.anim.p"></button><button class="dot sm exp" data-t="p1.sk.anim.e"></button><span class="sn">Animal Handling</span><div class="mb" contenteditable data-k="p1.sk.anim.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.insi.p"></button><button class="dot sm exp" data-t="p1.sk.insi.e"></button><span class="sn">Insight</span><div class="mb" contenteditable data-k="p1.sk.insi.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.medi.p"></button><button class="dot sm exp" data-t="p1.sk.medi.e"></button><span class="sn">Medicine</span><div class="mb" contenteditable data-k="p1.sk.medi.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.perc.p"></button><button class="dot sm exp" data-t="p1.sk.perc.e"></button><span class="sn">Perception</span><div class="mb" contenteditable data-k="p1.sk.perc.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.surv.p"></button><button class="dot sm exp" data-t="p1.sk.surv.e"></button><span class="sn">Survival</span><div class="mb" contenteditable data-k="p1.sk.surv.m"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHA -->
+          <div class="ab-blk" style="flex:5;">
+            <span class="ab-vname">CHA</span>
+            <div class="ab-body">
+              <div class="ab-head"><div class="ab-score" contenteditable data-k="p1.cha.score"></div><div class="ab-mod" contenteditable data-k="p1.cha.mod"></div><div class="svgrp"><span class="ab-sv">SV</span><button class="dot sm" data-t="p1.cha.savep"></button><div class="sbox" contenteditable data-k="p1.cha.save"></div></div></div>
+              <div class="sklist">
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.dece.p"></button><button class="dot sm exp" data-t="p1.sk.dece.e"></button><span class="sn">Deception</span><div class="mb" contenteditable data-k="p1.sk.dece.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.inti.p"></button><button class="dot sm exp" data-t="p1.sk.inti.e"></button><span class="sn">Intimidation</span><div class="mb" contenteditable data-k="p1.sk.inti.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.perf.p"></button><button class="dot sm exp" data-t="p1.sk.perf.e"></button><span class="sn">Performance</span><div class="mb" contenteditable data-k="p1.sk.perf.m"></div></div>
+                <div class="sk-row"><button class="dot sm" data-t="p1.sk.pers.p"></button><button class="dot sm exp" data-t="p1.sk.pers.e"></button><span class="sn">Persuasion</span><div class="mb" contenteditable data-k="p1.sk.pers.m"></div></div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /ablist -->
+      </div>
+      </div><!-- /abilities panel -->
+      <div class="panel ref" style="flex:0 0 auto;"><div class="panel-h"><span class="sect-title">Senses</span></div><div class="panel-body"><div class="ruled" style="flex:none;height:112px;" contenteditable data-k="p1.senses" data-ph="Darkvision 60 ft · blindsight · special senses…"></div></div></div>
+    </div><!-- /left -->
+
+    <!-- CENTER — Weapons · Combat Actions · Limited-Use -->
+    <div class="col grow" style="min-width:0;">
+
+      <!-- Weapons & Attacks (active: touched every fight) -->
+      <div class="panel active" style="flex:0 0 auto;">
+        <div class="panel-h"><span class="sect-title">Weapons &amp; Attacks</span></div>
+        <div class="panel-body" style="padding:7px 7px;gap:4px;">
+          <div class="watable">
+            <div class="wahead"><span class="lbl">Weapon / Attack</span><span class="lbl c">Atk/DC</span><span class="lbl">Damage · Type</span><span class="lbl c">Mastery</span></div>
+            <div class="warow"><div class="cell" contenteditable data-k="p1.w1.n"></div><div class="cell c" contenteditable data-k="p1.w1.atk"></div><div class="cell" contenteditable data-k="p1.w1.dmg"></div><div class="cell c" contenteditable data-k="p1.w1.mas"></div></div>
+            <div class="warow"><div class="cell" contenteditable data-k="p1.w2.n"></div><div class="cell c" contenteditable data-k="p1.w2.atk"></div><div class="cell" contenteditable data-k="p1.w2.dmg"></div><div class="cell c" contenteditable data-k="p1.w2.mas"></div></div>
+            <div class="warow"><div class="cell" contenteditable data-k="p1.w3.n"></div><div class="cell c" contenteditable data-k="p1.w3.atk"></div><div class="cell" contenteditable data-k="p1.w3.dmg"></div><div class="cell c" contenteditable data-k="p1.w3.mas"></div></div>
+            <div class="warow"><div class="cell" contenteditable data-k="p1.w4.n"></div><div class="cell c" contenteditable data-k="p1.w4.atk"></div><div class="cell" contenteditable data-k="p1.w4.dmg"></div><div class="cell c" contenteditable data-k="p1.w4.mas"></div></div>
+          </div>
+          <div class="wnotes"><span class="lbl">Properties · Ammo · Notes</span><div class="ruled" style="flex:none;height:64px;" contenteditable data-k="p1.w.notes" data-ph="Properties, ammo, range, notes…"></div></div>
+        </div>
+      </div>
+
+      <!-- Combat Actions — three cards direct in col, no outer wrapper -->
+      <div class="actrow"><span class="vlabel">Actions</span><div class="ruled" contenteditable data-k="p1.actions" data-ph="Attack · Dash · Dodge · Disengage · Hide · Help · Ready · Search…"></div></div>
+      <div class="actrow"><span class="vlabel">Bonus</span><div class="ruled" contenteditable data-k="p1.bonus" data-ph="Off-hand attack · bonus-action spells · class &amp; feat features…"></div></div>
+      <div class="actrow"><span class="vlabel">Reactions</span><div class="ruled" contenteditable data-k="p1.react" data-ph="Opportunity Attack · readied action · Shield · Counterspell…"></div></div>
+
+      <!-- Limited-Use Resources (ref: tracked per rest, not per turn) -->
+      <div class="panel ref" style="flex:0 0 auto;">
+        <div class="panel-h"><span class="sect-title">Limited-Use Resources</span></div>
+        <div class="panel-body"><div class="ruled" style="flex:none;height:112px;" contenteditable data-k="p1.limited" data-ph="Slots, charges, ki, superiority dice…"></div></div>
+      </div>
+
+    </div><!-- /center -->
+
+    <!-- RIGHT — Key Features · Proficiencies (Senses moved to left column) -->
+    <div class="col rightcol" style="width:190px;">
+      <div class="panel ref grow"><div class="panel-h"><span class="sect-title">Key Features</span></div><div class="panel-body"><div class="ruled" style="font-size:11px;" contenteditable data-k="p1.features" data-ph="At-the-table triggers &amp; reminders — full write-ups on Features &amp; Traits page…"></div></div></div>
+      <div class="panel ref" style="flex:0 0 auto;"><div class="panel-h"><span class="sect-title">Proficiencies</span></div><div class="panel-body"><div class="ruled" style="flex:none;height:232px;" contenteditable data-k="p1.languages" data-ph="Languages, tools, weapons, armor…"></div></div></div>
+    </div><!-- /right -->
+
+  </div><!-- /body row -->
+
+  <!-- ── CONDITIONS STRIP ───────────────────────────────────── -->
+  <div class="panel active" style="flex:0 0 auto;">
+    <div class="panel-h"><span class="sect-title">Conditions</span><span class="meta lbl">Tap to flag · active = scarlet</span></div>
+    <div class="panel-body" style="padding:5px 10px;">
+      <div class="cond-strip">
+        <button class="cflag" data-t="p1.cond.blinded" title="Blinded">BLIND</button>
+        <button class="cflag" data-t="p1.cond.charmed" title="Charmed">CHARM</button>
+        <button class="cflag" data-t="p1.cond.deafened" title="Deafened">DEAF</button>
+        <button class="cflag" data-t="p1.cond.frightened" title="Frightened">FRGHT</button>
+        <button class="cflag" data-t="p1.cond.grappled" title="Grappled">GRAPL</button>
+        <button class="cflag" data-t="p1.cond.incapacitated" title="Incapacitated">INCAP</button>
+        <button class="cflag" data-t="p1.cond.invisible" title="Invisible">INVIS</button>
+        <button class="cflag" data-t="p1.cond.paralyzed" title="Paralyzed">PARLZ</button>
+        <button class="cflag" data-t="p1.cond.petrified" title="Petrified">PETRI</button>
+        <button class="cflag" data-t="p1.cond.poisoned" title="Poisoned">POISN</button>
+        <button class="cflag" data-t="p1.cond.prone" title="Prone">PRONE</button>
+        <button class="cflag" data-t="p1.cond.restrained" title="Restrained">RESTR</button>
+        <button class="cflag" data-t="p1.cond.stunned" title="Stunned">STUN</button>
+        <button class="cflag" data-t="p1.cond.unconscious" title="Unconscious">UNCON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot" style="font-size:11px;"><span class="red">AEGIS SOLUTIONS</span><span class="sep">·</span><span class="ttl">Operative Record</span></div>
+
+ </div>
+</section>
+
+<!-- ============================================================
+     PAGE 2 — FEATURES & TRAITS  (full capability record)
+     ============================================================ -->
+<section class="page feat-page" data-screen-label="Page 2 — Features & Traits">
+ <svg class="watermark" viewBox="0 0 40 44"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" fill="currentColor"/></svg>
+ <div class="page-frame">
+
+  <div class="aegis-bar">
+    <svg class="emblem" viewBox="0 0 40 44" fill="none"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" stroke="currentColor" stroke-width="2"/><path d="M20 11 L28 31 H23.2 L20 22.5 L16.8 31 H12 Z" fill="currentColor"/></svg>
+    <div class="wordmark"><span class="name">AEGIS SOLUTIONS</span><span class="sub">Capability Record</span></div>
+    <div class="meta"><div class="form" data-formname="FEATURES"></div><div class="pg" data-suffix="Capability Record"></div></div>
+  </div>
+
+  <!-- single Features card — header + 4 unlabeled fields inside -->
+  <div class="panel ref grow">
+    <div class="panel-h">
+      <span class="sect-title">Features</span>
+      <div class="feat-legend">
+        <span class="lg-chip class">Class</span>
+        <span class="lg-chip sub">Subclass</span>
+        <span class="lg-chip species">Species</span>
+        <span class="lg-chip feat">Feat</span>
+      </div>
+    </div>
+    <div class="panel-body" style="gap:9px;">
+      <!-- top three fields: wide left + two stacked right -->
+      <div class="row" style="flex:1;min-height:0;gap:9px;">
+        <div class="ruled" style="flex:1.3;min-height:0;" contenteditable data-k="feat.class" data-ph=""></div>
+        <div class="col" style="flex:1;gap:9px;">
+          <div class="ruled" style="flex:1;min-height:0;" contenteditable data-k="feat.subclass" data-ph=""></div>
+          <div class="ruled" style="flex:1;min-height:0;" contenteditable data-k="feat.species" data-ph=""></div>
+        </div>
+      </div>
+      <!-- full-width bottom field -->
+      <div class="ruled" style="flex:none;height:112px;" contenteditable data-k="feat.other" data-ph=""></div>
+    </div>
+  </div>
+
+  <div class="feat-controls"><button class="feat-add">+ Features page</button></div>
+
+  <div class="page-foot" style="font-size: 11px"><span class="red">AEGIS SOLUTIONS</span><span class="sep">·</span><span class="ttl">Capability Record</span></div>
+
+ </div>
+</section>
+
+<!-- ============================================================
+     PAGE 3 — SPELLS & STORES  (spells first, stores at bottom)
+     ============================================================ -->
+<section class="page" id="page-arsenal" data-screen-label="Page 3 — Spells & Stores">
+ <svg class="watermark" viewBox="0 0 40 44"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" fill="currentColor"/></svg>
+ <div class="page-frame">
+
+  <div class="aegis-bar">
+    <svg class="emblem" viewBox="0 0 40 44" fill="none"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" stroke="currentColor" stroke-width="2"/><path d="M20 11 L28 31 H23.2 L20 22.5 L16.8 31 H12 Z" fill="currentColor"/></svg>
+    <div class="wordmark"><span class="name">AEGIS SOLUTIONS</span><span class="sub">Arsenal &amp; Arcana</span></div>
+    <div class="meta"><div class="form" data-formname="LOADOUT"></div><div class="pg" data-suffix="Stores &amp; Spells"></div></div>
+  </div>
+
+  <!-- spell command header -->
+  <div class="panel active spellcast-panel">
+    <div class="panel-h"><span class="sect-title">Spellcasting &amp; Slots</span><span class="meta lbl" style="font-size:7px;">TOTAL · EXPENDED</span></div>
+    <div class="panel-body">
+      <div class="spell-command">
+        <div class="spell-fields">
+          <div class="field"><span class="lbl">Class</span><div class="fbox" contenteditable data-k="p4.spclass"></div></div>
+          <div class="field"><span class="lbl">Ability</span><div class="fbox" contenteditable data-k="p4.spability"></div></div>
+          <div class="field"><span class="lbl">Save DC</span><div class="fbox num" contenteditable data-k="p4.spdc"></div></div>
+          <div class="field"><span class="lbl">Atk Bonus</span><div class="fbox num" contenteditable data-k="p4.spatk"></div></div>
+        </div>
+        <div class="slot-panel">
+          <div class="slot-grid">
+            <div class="slot"><div class="lv">1<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl1.t"></div><div class="pips"><button class="dot" data-t="p4.sl1.p1"></button><button class="dot" data-t="p4.sl1.p2"></button><button class="dot" data-t="p4.sl1.p3"></button><button class="dot" data-t="p4.sl1.p4"></button></div></div>
+            <div class="slot"><div class="lv">2<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl2.t"></div><div class="pips"><button class="dot" data-t="p4.sl2.p1"></button><button class="dot" data-t="p4.sl2.p2"></button><button class="dot" data-t="p4.sl2.p3"></button><button class="dot" data-t="p4.sl2.p4"></button></div></div>
+            <div class="slot"><div class="lv">3<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl3.t"></div><div class="pips"><button class="dot" data-t="p4.sl3.p1"></button><button class="dot" data-t="p4.sl3.p2"></button><button class="dot" data-t="p4.sl3.p3"></button><button class="dot" data-t="p4.sl3.p4"></button></div></div>
+            <div class="slot"><div class="lv">4<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl4.t"></div><div class="pips"><button class="dot" data-t="p4.sl4.p1"></button><button class="dot" data-t="p4.sl4.p2"></button><button class="dot" data-t="p4.sl4.p3"></button><button class="dot" data-t="p4.sl4.p4"></button></div></div>
+            <div class="slot"><div class="lv">5<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl5.t"></div><div class="pips"><button class="dot" data-t="p4.sl5.p1"></button><button class="dot" data-t="p4.sl5.p2"></button><button class="dot" data-t="p4.sl5.p3"></button></div></div>
+            <div class="slot"><div class="lv">6<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl6.t"></div><div class="pips"><button class="dot" data-t="p4.sl6.p1"></button><button class="dot" data-t="p4.sl6.p2"></button></div></div>
+            <div class="slot"><div class="lv">7<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl7.t"></div><div class="pips"><button class="dot" data-t="p4.sl7.p1"></button><button class="dot" data-t="p4.sl7.p2"></button></div></div>
+            <div class="slot"><div class="lv">8<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl8.t"></div><div class="pips"><button class="dot" data-t="p4.sl8.p1"></button></div></div>
+            <div class="slot"><div class="lv">9<small>LVL</small></div><div class="total" contenteditable data-k="p4.sl9.t"></div><div class="pips"><button class="dot" data-t="p4.sl9.p1"></button></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- cantrips -->
+  <div class="panel active spell-table-panel cantrips-panel">
+    <div class="panel-h"><span class="sect-title">Cantrips · At-Will</span><button class="row-add spell-add" data-row-kind="cantrip">+ Row</button></div>
+    <div class="panel-body" style="padding:7px 7px;">
+      <div class="cantrip-list">
+        <div class="chead"><span class="lbl l">Name</span><span class="lbl">Range</span><span class="lbl">Save/Hit</span><span class="lbl l">Damage / Effect</span></div>
+        <div class="crow"><div class="cn" contenteditable data-k="p4.ctn1"></div><div class="rng" contenteditable data-k="p4.ctr1"></div><div class="hit" contenteditable data-k="p4.cth1"></div><div class="fx" contenteditable data-k="p4.ctf1"></div></div>
+        <div class="crow"><div class="cn" contenteditable data-k="p4.ctn2"></div><div class="rng" contenteditable data-k="p4.ctr2"></div><div class="hit" contenteditable data-k="p4.cth2"></div><div class="fx" contenteditable data-k="p4.ctf2"></div></div>
+        <div class="crow"><div class="cn" contenteditable data-k="p4.ctn3"></div><div class="rng" contenteditable data-k="p4.ctr3"></div><div class="hit" contenteditable data-k="p4.cth3"></div><div class="fx" contenteditable data-k="p4.ctf3"></div></div>
+        <div class="crow"><div class="cn" contenteditable data-k="p4.ctn4"></div><div class="rng" contenteditable data-k="p4.ctr4"></div><div class="hit" contenteditable data-k="p4.cth4"></div><div class="fx" contenteditable data-k="p4.ctf4"></div></div>
+        <div class="crow"><div class="cn" contenteditable data-k="p4.ctn5"></div><div class="rng" contenteditable data-k="p4.ctr5"></div><div class="hit" contenteditable data-k="p4.cth5"></div><div class="fx" contenteditable data-k="p4.ctf5"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- prepared spells -->
+  <div class="panel active spell-table-panel spells-panel">
+    <div class="panel-h"><span class="sect-title">Prepared / Known Spells</span><button class="row-add spell-add" data-row-kind="spell">+ Row</button></div>
+    <div class="panel-body" style="padding:7px 7px;">
+      <div class="splist">
+        <div class="shead"><span class="lbl">Conc</span><span class="lbl">Prep</span><span class="lbl l">Name</span><span class="lbl">Lvl</span><span class="lbl">Range</span><span class="lbl">Save/Hit</span><span class="lbl l">Damage / Effect</span></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc1"></button></span><span class="prep"><button class="dot" data-t="p4.pr1"></button></span><div class="nm" contenteditable data-k="p4.pn1"></div><div class="lv" contenteditable data-k="p4.pl1"></div><div class="rng" contenteditable data-k="p4.rg1"></div><div class="hit" contenteditable data-k="p4.sh1"></div><div class="fx" contenteditable data-k="p4.fx1"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc2"></button></span><span class="prep"><button class="dot" data-t="p4.pr2"></button></span><div class="nm" contenteditable data-k="p4.pn2"></div><div class="lv" contenteditable data-k="p4.pl2"></div><div class="rng" contenteditable data-k="p4.rg2"></div><div class="hit" contenteditable data-k="p4.sh2"></div><div class="fx" contenteditable data-k="p4.fx2"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc3"></button></span><span class="prep"><button class="dot" data-t="p4.pr3"></button></span><div class="nm" contenteditable data-k="p4.pn3"></div><div class="lv" contenteditable data-k="p4.pl3"></div><div class="rng" contenteditable data-k="p4.rg3"></div><div class="hit" contenteditable data-k="p4.sh3"></div><div class="fx" contenteditable data-k="p4.fx3"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc4"></button></span><span class="prep"><button class="dot" data-t="p4.pr4"></button></span><div class="nm" contenteditable data-k="p4.pn4"></div><div class="lv" contenteditable data-k="p4.pl4"></div><div class="rng" contenteditable data-k="p4.rg4"></div><div class="hit" contenteditable data-k="p4.sh4"></div><div class="fx" contenteditable data-k="p4.fx4"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc5"></button></span><span class="prep"><button class="dot" data-t="p4.pr5"></button></span><div class="nm" contenteditable data-k="p4.pn5"></div><div class="lv" contenteditable data-k="p4.pl5"></div><div class="rng" contenteditable data-k="p4.rg5"></div><div class="hit" contenteditable data-k="p4.sh5"></div><div class="fx" contenteditable data-k="p4.fx5"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc6"></button></span><span class="prep"><button class="dot" data-t="p4.pr6"></button></span><div class="nm" contenteditable data-k="p4.pn6"></div><div class="lv" contenteditable data-k="p4.pl6"></div><div class="rng" contenteditable data-k="p4.rg6"></div><div class="hit" contenteditable data-k="p4.sh6"></div><div class="fx" contenteditable data-k="p4.fx6"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc7"></button></span><span class="prep"><button class="dot" data-t="p4.pr7"></button></span><div class="nm" contenteditable data-k="p4.pn7"></div><div class="lv" contenteditable data-k="p4.pl7"></div><div class="rng" contenteditable data-k="p4.rg7"></div><div class="hit" contenteditable data-k="p4.sh7"></div><div class="fx" contenteditable data-k="p4.fx7"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc8"></button></span><span class="prep"><button class="dot" data-t="p4.pr8"></button></span><div class="nm" contenteditable data-k="p4.pn8"></div><div class="lv" contenteditable data-k="p4.pl8"></div><div class="rng" contenteditable data-k="p4.rg8"></div><div class="hit" contenteditable data-k="p4.sh8"></div><div class="fx" contenteditable data-k="p4.fx8"></div></div>
+        <div class="sprow"><span class="conc-mark"><button class="dot" data-t="p4.pc9"></button></span><span class="prep"><button class="dot" data-t="p4.pr9"></button></span><div class="nm" contenteditable data-k="p4.pn9"></div><div class="lv" contenteditable data-k="p4.pl9"></div><div class="rng" contenteditable data-k="p4.rg9"></div><div class="hit" contenteditable data-k="p4.sh9"></div><div class="fx" contenteditable data-k="p4.fx9"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- stores at bottom -->
+  <div class="stores-stack">
+    <div class="stores-grid">
+      <div class="panel ref grow"><div class="panel-h"><span class="sect-title">Gear</span><span class="meta lbl" style="font-size:7px;">ARMOR · WEAPONS</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="p4.gear"></div></div></div>
+      <div class="panel ref grow">
+        <div class="panel-h">
+          <span class="sect-title">Inventory</span>
+          <div class="header-ledger">
+            <label><span class="lbl">Notes</span><span class="fbox mini-ledger" contenteditable data-k="p4.notes"></span></label>
+            <label><span class="lbl">Debt</span><span class="fbox mini-ledger" contenteditable data-k="p5.debt"></span></label>
+          </div>
+        </div>
+        <div class="panel-body"><div class="ruled" contenteditable data-k="p4.inventory"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-foot" style="font-size: 11px"><span class="red">AEGIS SOLUTIONS</span><span class="sep">·</span><span class="ttl">Arsenal &amp; Arcana</span></div>
+
+ </div>
+</section>
+
+<!-- ============================================================
+     PAGE 4 — PROFILE & BACKSTORY  (merged profile + chronicle)
+     ============================================================ -->
+<section class="page" data-screen-label="Page 4 — Profile & Backstory">
+ <svg class="watermark" viewBox="0 0 40 44"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" fill="currentColor"/></svg>
+ <div class="page-frame">
+
+  <div class="aegis-bar">
+    <svg class="emblem" viewBox="0 0 40 44" fill="none"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" stroke="currentColor" stroke-width="2"/><path d="M20 11 L28 31 H23.2 L20 22.5 L16.8 31 H12 Z" fill="currentColor"/></svg>
+    <div class="wordmark"><span class="name">AEGIS SOLUTIONS</span><span class="sub">Profile &amp; Backstory</span></div>
+    <div class="meta"><div class="form" data-formname="PROFILE"></div><div class="pg" data-suffix="Profile &amp; Backstory"></div></div>
+  </div>
+
+  <!-- roleplay main: paragraph fields around a centered portrait -->
+  <div class="profile-main">
+    <div class="profile-col">
+      <div class="actrow"><span class="vlabel">Personality</span><div class="ruled" contenteditable data-k="p3.personality"></div></div>
+      <div class="actrow"><span class="vlabel">Ideals &amp; Values</span><div class="ruled" contenteditable data-k="p3.ideals"></div></div>
+      <div class="actrow"><span class="vlabel">Bonds</span><div class="ruled" contenteditable data-k="p3.bonds"></div></div>
+    </div>
+
+    <div class="profile-center">
+      <div class="designation" style="justify-content:center; padding:3px 10px; flex:0 0 auto;"><span class="tag" style="font-size:9.5px; letter-spacing:.2em;">P.O.D&nbsp;//&nbsp;<span contenteditable data-k="p3.pod" style="outline:none;">712</span></span></div>
+      <div class="panel active identity-panel">
+        <div class="panel-body">
+          <div class="field"><span class="lbl">Character Name</span><div class="fbox bigname" contenteditable data-k="p1.name"></div></div>
+          <div class="g2" style="gap:7px;">
+            <div class="field"><span class="lbl">Species / Ancestry</span><div class="fbox" contenteditable data-k="p1.species"></div></div>
+            <div class="field"><span class="lbl">Class &amp; Level</span><div class="fbox" contenteditable data-k="p1.classlevel"></div></div>
+          </div>
+          <div class="g2" style="gap:7px;">
+            <div class="field"><span class="lbl">Background</span><div class="fbox" contenteditable data-k="p1.background"></div></div>
+            <div class="field"><span class="lbl">Alignment</span><div class="fbox" contenteditable data-k="p3.alignment"></div></div>
+          </div>
+          <div class="rp-details">
+            <div class="field"><span class="lbl">Height</span><div class="fbox" contenteditable data-k="p3.height"></div></div>
+            <div class="field"><span class="lbl">Weight</span><div class="fbox" contenteditable data-k="p3.weight"></div></div>
+            <div class="field"><span class="lbl">Hair</span><div class="fbox" contenteditable data-k="p3.hair"></div></div>
+            <div class="field"><span class="lbl">Eyes</span><div class="fbox" contenteditable data-k="p3.eyes"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="portrait2">
+        <image-slot id="p3portrait" class="pslot" shape="rounded" radius="12" placeholder="UPLOAD IMAGE"></image-slot>
+        <span class="corner tl"></span><span class="corner tr"></span><span class="corner bl"></span><span class="corner br"></span>
+      </div>
+    </div>
+
+    <div class="profile-col">
+      <div class="actrow flip"><span class="vlabel">Flaws</span><div class="ruled" contenteditable data-k="p3.flaws"></div></div>
+      <div class="actrow flip"><span class="vlabel">Goals</span><div class="ruled" contenteditable data-k="p3.goals"></div></div>
+      <div class="actrow flip"><span class="vlabel">Allies &amp; Orgs</span><div class="ruled" contenteditable data-k="p3.allies"></div></div>
+    </div>
+  </div>
+
+  <!-- appearance + backstory: merged chronicle bottom -->
+  <div class="profile-bottom">
+    <div class="actrow" style="flex:1;"><span class="vlabel">Appearance</span><div class="ruled" contenteditable data-k="p3.appearance"></div></div>
+    <div class="actrow flip" style="flex:1.4;"><span class="vlabel">Backstory</span><div class="ruled" contenteditable data-k="p5.backstory"></div></div>
+  </div>
+
+  <div class="page-foot" style="font-size: 11px"><span class="red">AEGIS SOLUTIONS</span><span class="sep">·</span><span class="ttl">Profile &amp; Backstory</span></div>
+
+ </div>
+</section>
+
+<script src="image-slot.js?v=20260606d"></script>
+<script src="sheet.js?v=20260606d"></script>
+<script src="cloud-config.js?v=20260606d"></script>
+<script src="cloud-save.js?v=20260606d"></script>
+</body>
+</html>
