@@ -1,0 +1,715 @@
+/* ============================================================
+   AEGIS SOLUTIONS — Personnel Dossier  (D&D 5.5e)
+   Bounty-acquisition corp aesthetic.
+   Charcoal-grey chrome · warm off-white fillable boxes ·
+   scarlet accent · ice secondary. Print / fillable-PDF first.
+
+   Color language:
+     .panel.active  →  red   — combat / live-play items
+     .panel.ref     →  ice   — reference / character definition
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+/* ============================================================
+   DESIGN TOKENS
+   ============================================================ */
+:root{
+  /* chrome */
+  --bg:#1b1d20;
+  --bg-2:#232629;
+  --bg-3:#2b2f33;
+  --frame:#3d4248;
+  --frame-soft:#30353a;
+
+  /* fillable (warm off-white) */
+  --field:#f1ede4;
+  --field-2:#e7e2d6;
+  --field-ink:#1d1f22;
+  --rule:#ccc6b8;
+
+  /* labels on dark */
+  --label:#dadde2;
+  --label-dim:#8b9199;
+
+  /* accents */
+  --red:#ff5a3c;
+  --red-2:#e0492c;
+  --red-soft:rgba(255,90,60,.30);
+  --steel:#8a929c;
+  --steel-2:#aeb5be;
+
+  /* cool slate-blue (reference accent) */
+  --ice:#7f99bd;
+  --ice-2:#9fb6d6;
+  --ice-soft:rgba(127,153,189,.28);
+
+  --r:7px;
+}
+
+*{ box-sizing:border-box; margin:0; padding:0; }
+
+html,body{ background:#0e0f11; }
+body{
+  font-family:'Space Grotesk',system-ui,sans-serif;
+  color:var(--label);
+  -webkit-font-smoothing:antialiased;
+  padding:78px 0 60px;
+}
+
+/* ============================================================
+   SCREEN TOOLBAR (hidden in print)
+   ============================================================ */
+.toolbar{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  display:flex; align-items:center; gap:16px;
+  padding:9px 20px;
+  background:rgba(16,17,19,.9);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--frame-soft);
+  font-size:11px;
+}
+.toolbar .brand{
+  font-family:'Space Mono',monospace; font-weight:700;
+  letter-spacing:.34em; text-transform:uppercase; font-size:11px;
+  color:var(--red);
+}
+.toolbar .brand b{ color:var(--label); }
+.toolbar .spacer{ flex:1; }
+.toolbar .hint{ color:var(--label-dim); letter-spacing:.06em; }
+.toolbar button{
+  font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; cursor:pointer;
+  color:var(--label); background:transparent;
+  border:1px solid var(--frame); border-radius:5px;
+  padding:6px 12px; transition:.15s;
+}
+.toolbar button:hover{ border-color:var(--red); color:var(--red); }
+#cloudStatus{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#cloudStatus[data-state="saved"],
+#cloudStatus[data-state="edit"]{ color:var(--ice-2); }
+#cloudStatus[data-state="saving"],
+#cloudStatus[data-state="loading"]{ color:var(--steel-2); }
+#cloudStatus[data-state="error"]{ color:var(--red); }
+body.read-only [contenteditable],
+body.read-only button[data-t]{
+  cursor:default;
+}
+body.read-only [contenteditable]:focus{
+  outline:none;
+  box-shadow:none;
+}
+
+/* ============================================================
+   PAGE STRUCTURE
+   ============================================================ */
+.page{
+  position:relative;
+  width:210mm; height:297mm;
+  margin:0 auto 40px;
+  background:
+    linear-gradient(180deg, #212427 0%, var(--bg) 30%),
+    var(--bg);
+  color:var(--label);
+  padding:15px;
+  overflow:hidden;
+  box-shadow:0 24px 60px rgba(0,0,0,.6), 0 0 0 1px #000;
+}
+/* faint corner texture */
+.page::before{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.5), transparent),
+    radial-gradient(1px 1px at 78% 9%, rgba(255,255,255,.35), transparent),
+    radial-gradient(1px 1px at 33% 62%, rgba(255,255,255,.4), transparent),
+    radial-gradient(1px 1px at 91% 73%, rgba(255,255,255,.3), transparent),
+    radial-gradient(1px 1px at 5% 88%, rgba(255,255,255,.35), transparent),
+    radial-gradient(1px 1px at 57% 14%, rgba(255,255,255,.35), transparent);
+  background-repeat:no-repeat;
+}
+/* ghost emblem watermark */
+.page > .watermark{
+  position:absolute; right:-60px; bottom:-50px; width:340px; height:auto;
+  color:#ffffff; opacity:.022; pointer-events:none; z-index:0;
+}
+.page-frame{
+  position:relative; z-index:1;
+  height:100%;
+  border:1px solid var(--frame);
+  border-radius:10px;
+  padding:12px 14px;
+  display:flex; flex-direction:column; gap:6px;
+  background:linear-gradient(180deg, rgba(255,90,60,.018), transparent 40%);
+}
+/* corner brackets */
+.page-frame::before,.page-frame::after{
+  content:""; position:absolute; width:12px; height:12px; pointer-events:none;
+}
+.page-frame::before{ top:-1px; left:-1px; border-top:2px solid var(--red); border-left:2px solid var(--red); border-top-left-radius:10px; }
+.page-frame::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--red); border-right:2px solid var(--red); border-bottom-right-radius:10px; }
+#page-arsenal{
+  height:auto;
+  min-height:297mm;
+  overflow:visible;
+}
+#page-arsenal .page-frame{
+  min-height:calc(297mm - 30px);
+  height:auto;
+}
+#page-arsenal .stores-stack,
+#page-arsenal .stores-grid,
+#page-arsenal .stores-grid .panel,
+#page-arsenal .stores-grid .panel-body{
+  min-height:220px;
+}
+
+/* ============================================================
+   AEGIS BRANDING BAR (page header)
+   ============================================================ */
+.aegis-bar{
+  display:flex; align-items:center; gap:11px;
+  padding-bottom:8px; border-bottom:1.5px solid var(--red);
+  flex:0 0 auto;
+}
+.emblem{ width:30px; height:33px; color:var(--red); flex:0 0 auto; }
+.aegis-bar .wordmark{ display:flex; flex-direction:column; gap:1px; }
+.aegis-bar .wordmark .name{
+  font-family:'Space Mono',monospace; font-weight:700;
+  font-size:14px; letter-spacing:.30em; text-transform:uppercase; color:var(--label);
+}
+.aegis-bar .wordmark .sub{
+  font-size:8px; letter-spacing:.30em; text-transform:uppercase; color:var(--label-dim);
+}
+.aegis-bar .meta{ margin-left:auto; text-align:right; }
+.aegis-bar .meta .form{
+  font-family:'Space Mono',monospace; font-size:10px; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--red);
+}
+.aegis-bar .meta .pg{ font-size:8px; letter-spacing:.26em; text-transform:uppercase; color:var(--label-dim); }
+
+/* ============================================================
+   TYPOGRAPHY HELPERS
+   ============================================================ */
+.lbl{ font-size:7.5px; letter-spacing:.04em; text-transform:uppercase; color:var(--label); font-weight:600; }
+.sect-title{
+  font-family:'Space Grotesk',sans-serif; font-weight:600;
+  font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--label); white-space:nowrap;
+}
+.mono{ font-family:'Space Mono',monospace; }
+.bigname{ font-size:22px; font-weight:700; letter-spacing:.01em; min-height:32px; }
+.num{ text-align:center; font-weight:600; }
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+.panel{
+  background:var(--bg-2);
+  border:1px solid var(--frame);
+  border-radius:var(--r);
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.panel-h{
+  display:flex; align-items:center; gap:8px;
+  padding:6px 10px;
+  background:var(--bg-3);
+  border-bottom:1px solid var(--frame);
+}
+.panel-h::before{
+  content:""; width:4px; height:13px; border-radius:2px; flex:0 0 auto;
+  background:var(--steel);
+}
+/* scarlet accent — combat / active panels */
+.panel.active .panel-h::before{ background:var(--red); box-shadow:0 0 7px var(--red-soft); }
+/* ice accent — reference / static panels */
+.panel.ref .panel-h::before{ background:var(--ice); box-shadow:0 0 6px var(--ice-soft); }
+/* stat box top-bar colors */
+.stat.active{ border-top-color:var(--red); }
+.stat.ref{ border-top-color:var(--ice); }
+.panel-h .meta{ margin-left:auto; }
+.panel-body{ padding:9px 7px; display:flex; flex-direction:column; gap:8px; flex:1; min-height:0; }
+
+/* ============================================================
+   FILLABLE FIELDS (warm off-white)
+   ============================================================ */
+.fbox{
+  background:var(--field); color:var(--field-ink);
+  border-radius:5px; border:1px solid #d8d2c4;
+  padding:5px 9px;
+  font-size:13px; line-height:1.4; min-height:26px;
+  outline:none; font-family:'Space Grotesk',sans-serif;
+}
+.fbox:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+.fbox[data-ph]:empty:before{ content:""; }
+
+.field{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.field > .lbl{ padding-left:2px; }
+.field-row{ display:flex; align-items:center; gap:7px; }
+.field-row > .lbl{ white-space:nowrap; }
+.field-row > .fbox{ flex:1; }
+
+/* ============================================================
+   RULED WRITING AREAS (24 px line rhythm)
+   ============================================================ */
+.ruled{
+  background:var(--field); color:var(--field-ink);
+  border:1px solid #d8d2c4; border-radius:6px;
+  padding:8px 10px; font-size:13px; line-height:24px;
+  outline:none; flex:1;
+  background-image:repeating-linear-gradient(transparent, transparent 23px, var(--rule) 23px, var(--rule) 24px);
+  background-position:0 7px;
+}
+.ruled:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+.ruled[data-ph]:empty:before{ content:""; }
+
+/* ============================================================
+   STAT BOXES (small labeled value cards)
+   ============================================================ */
+.stat{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  background:var(--bg-2); border:1px solid var(--frame);
+  border-top:2px solid var(--steel);
+  border-radius:6px; padding:5px 4px 6px; text-align:center;
+}
+.stat .lbl{ font-size:8px; letter-spacing:.02em; line-height:1.1; white-space:nowrap; }
+.stat .val{
+  background:var(--field); color:var(--field-ink);
+  border-radius:4px; width:100%; min-height:28px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; font-weight:600; outline:none;
+}
+.stat .val:focus{ box-shadow:0 0 0 2px var(--red-soft); }
+.stat .val.big{ font-size:21px; }
+
+/* ============================================================
+   TOGGLE DOTS & EXHAUSTION PIPS
+   ============================================================ */
+.dot{
+  -webkit-appearance:none; appearance:none; cursor:pointer;
+  width:12px; height:12px; border-radius:50%;
+  border:1.4px solid var(--label-dim); background:transparent;
+  flex:0 0 auto; transition:.12s; position:relative;
+}
+.dot:hover{ border-color:var(--red); }
+.dot.on{ background:var(--red); border-color:var(--red); }
+.dot.exp{ border-radius:2px; }
+.dot.exp.on{ background:var(--ice-2); border-color:var(--ice-2); }  /* expertise: ice */
+.dot.lg{ width:15px; height:15px; }
+.dot.fail.on{ background:var(--red); border-color:var(--red); }
+.dot.ok.on{ background:var(--ice-2); border-color:var(--ice-2); }  /* death success: ice */
+.dot.sm{ width:9px; height:9px; border-width:1.2px; }
+
+.epip{
+  -webkit-appearance:none; appearance:none; cursor:pointer;
+  width:17px; height:20px; border-radius:4px;
+  border:1px solid #0c0e11; background:linear-gradient(180deg,#101216,#191c20);
+  color:var(--label-dim); font-family:'Space Mono',monospace;
+  font-size:10px; font-weight:700; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:.12s; box-shadow:inset 0 1px 2px rgba(0,0,0,.5);
+}
+.epip:hover{ border-color:var(--red); color:var(--label); }
+.epip.on{ background:var(--red); border-color:var(--red); color:#fff; box-shadow:0 0 6px var(--red-soft); }
+
+/* ============================================================
+   LAYOUT UTILITIES
+   ============================================================ */
+.row{ display:flex; gap:9px; }
+.col{ display:flex; flex-direction:column; gap:9px; }
+.grow{ flex:1; min-height:0; }
+.g2{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.g3{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.page-foot{
+  display:flex; align-items:center; justify-content:center; gap:11px; flex:0 0 auto;
+  padding-top:4px;
+  font-family:'Space Mono',monospace; font-size:8px; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--label-dim);
+}
+.page-foot::before,.page-foot::after{ content:""; height:1px; background:var(--frame-soft); flex:1 1 0; max-width:150px; }
+.page-foot .red{ color:var(--red); }
+.page-foot .ttl{ color:var(--label); }
+.page-foot .sep{ opacity:.45; }
+
+/* ============================================================
+   IDENTITY HEADER (page 1 — main-top)
+   ============================================================ */
+.main-top{ display:grid; grid-template-columns:minmax(0,1fr) 306px minmax(0,1fr); gap:12px; align-items:stretch; }
+.main-top .side{ display:flex; flex-direction:column; gap:6px; min-height:0; }
+.main-top .side .field{ gap:3px; }
+.main-top .side .field .fbox{ min-height:24px; padding:4px 8px; line-height:1.24; }
+/* hero field (Name) grows to fill left-side height */
+.main-top .side .field.hero{ flex:1; min-height:0; }
+.main-top .side .field.hero .fbox{ height:100%; min-height:44px; display:flex; align-items:center; justify-content:center; text-align:center; font-size:21px; font-weight:700; letter-spacing:.01em; line-height:1.12; }
+/* idsplit: two fields share one row */
+.main-top .side .idsplit{ display:flex; gap:7px; align-items:stretch; flex:1; }
+.main-top .side .idsplit .field{ display:flex; flex-direction:column; }
+.main-top .side .idsplit .field .fbox{ flex:1; min-height:24px; display:flex; align-items:center; justify-content:center; }
+
+.center-crest{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:2px; margin:0; }
+.center-crest .emblem-lg{ width:28px; height:31px; color:var(--red); }
+.center-crest .ttl{ font-family:'Space Mono',monospace; font-weight:700; font-size:13px; letter-spacing:.28em; color:var(--label); text-transform:uppercase; text-align:center; }
+.center-crest .sub2{ font-size:8px; letter-spacing:.24em; color:var(--label-dim); text-transform:uppercase; white-space:nowrap; }
+.center-crest .cline{ width:58%; height:1px; background:var(--red); margin:1px 0 2px; opacity:.7; }
+
+.hpmatrix{ display:grid; grid-template-columns:1fr 1fr 1fr 1.15fr; gap:6px; width:100%; }
+.hpmatrix .stat{ padding:2px 4px 3px; }
+.hpmatrix .stat .val{ min-height:23px; font-size:16px; }
+
+.deaths{ display:flex; gap:10px; align-items:center; justify-content:space-between; background:var(--bg-2); border:1px solid var(--frame); border-radius:7px; padding:4px 12px; width:100%; }
+.deaths .dtitle{ font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--red); font-weight:700; white-space:nowrap; }
+.deaths .lbl{ white-space:nowrap; font-size:8.5px; letter-spacing:.12em; }
+.deaths .grp{ display:flex; align-items:center; gap:8px; }
+.deaths .grp .dots{ display:flex; gap:7px; }
+
+/* ============================================================
+   STAT BAND (page 1 — single horizontal bar)
+   ============================================================ */
+.statbar{
+  display:flex; align-items:stretch; flex:0 0 auto;
+  background:var(--bg-2); border:1px solid var(--frame);
+  border-top:2px solid var(--red); border-radius:7px; overflow:hidden;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03), 0 1px 2px rgba(0,0,0,.22);
+}
+.sb-cell{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; padding:5px 6px; flex:1; text-align:center; min-width:0;
+}
+/* min-height locks all labels to same height so sb-val boxes align */
+.sb-cell .lbl{ font-size:7.5px; letter-spacing:.04em; color:var(--label); min-height:2.3em; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.2; }
+.sb-val{
+  background:var(--field); color:var(--field-ink);
+  border:1px solid #c8c1b0; border-top-color:#b7af9c; border-radius:4px;
+  min-height:28px; min-width:34px;
+  font-size:20px; font-weight:700; text-align:center;
+  outline:none; padding:2px 5px; line-height:1;
+}
+.sb-val:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+.sb-sep{ width:1px; background:var(--frame); flex:0 0 1px; margin:7px 0; }
+/* inspiration — margin normalizes dot height to match sb-val height */
+.sb-inspo{ flex:0 0 auto; padding:5px 14px; }
+.sb-inspo .dot.lg{ width:18px; height:18px; margin-top:5px; margin-bottom:5px; }
+.sb-exh{ flex:1.3 1 0; }
+.sb-exh .exh-track{ min-height:28px; display:flex; align-items:center; gap:4px; }
+
+/* ============================================================
+   ABILITY BLOCKS (page 1 left column — vertical-tabbed modules)
+   ============================================================ */
+.ablist{ display:flex; flex-direction:column; gap:0; flex:1; min-height:0; }
+.ab-blk{ display:flex; align-items:stretch; background:var(--bg-2);
+  border:none; border-top:1px solid var(--frame-soft); overflow:hidden; min-height:0; }
+.ab-blk:first-child{ border-top:none; }
+.ab-vname{ writing-mode:vertical-rl; background:var(--bg-3);
+  border-left:3px solid var(--red); border-right:1px solid var(--frame-soft);
+  color:var(--red); font-size:12px; font-weight:700; letter-spacing:.1em;
+  padding:4px 4px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.ab-body{ flex:1; min-width:0; min-height:0; padding:3px 5px; display:flex; flex-direction:column; gap:1px; justify-content:flex-start; }
+.ab-head{ display:grid; grid-template-columns:36px 24px 1fr; gap:4px; align-items:center; }
+.ab-head .svgrp{ display:flex; align-items:center; gap:4px; justify-self:end; }
+.ab-head .svgrp .sbox{ width:32px; }
+.ab-head .ab-score{ background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4; border-radius:5px; min-height:25px; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; outline:none; }
+.ab-head .ab-score:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+.ab-head .ab-mod{ background:#15171a; color:var(--label); border:1px solid var(--frame); border-radius:5px; min-height:20px; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; outline:none; }
+.ab-head .ab-mod:focus{ border-color:var(--red); color:#fff; }
+.ab-head .ab-sv{ font-size:8px; letter-spacing:.06em; color:var(--label-dim); text-align:right; }
+.ab-head .sbox{ background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4; border-radius:4px; min-height:22px; text-align:center; font-size:12px; font-weight:600; outline:none; padding:0 2px; }
+.ab-head .sbox:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+.ablist .sklist{ flex:1; display:flex; flex-direction:column; margin-top:2px; }
+.ablist .sk-row{ grid-template-columns:12px 12px 1fr 26px; gap:4px; padding:0; flex:1 1 0; min-height:18px; align-items:center; }
+.ablist .sk-row .sn{ font-size:10px; letter-spacing:0; }
+.ablist .sk-row .mb{ min-height:17px; font-size:10.5px; }
+.ablist .dot.sm{ width:11px; height:11px; }
+.ab-blk .none{ flex:1; display:flex; align-items:center; font-size:8px; color:var(--label-dim); letter-spacing:.06em; text-transform:uppercase; }
+
+/* base sk-row (shared inside ablist) */
+.sk-row{ display:grid; grid-template-columns:10px 10px 1fr 18px; gap:2px; align-items:center; padding:1.5px 0; }
+.sk-row .sn{ font-size:8.6px; line-height:1.1; color:var(--label); white-space:nowrap; overflow:hidden; letter-spacing:-.02em; }
+.sk-row .mb{ background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4; border-radius:3px; min-height:15px; text-align:center; font-size:9.5px; font-weight:600; outline:none; padding:0 1px; }
+.sk-row .mb:focus{ border-color:var(--red); box-shadow:0 0 0 1px var(--red-soft); }
+
+/* ============================================================
+   WEAPONS TABLE (page 1 center)
+   ============================================================ */
+.watable{ display:flex; flex-direction:column; gap:2px; }
+/* base column grid — overridden below to add Mastery column */
+.wahead{ display:grid; gap:6px; padding:0 1px 1px; }
+.wahead .lbl{ white-space:nowrap; overflow:hidden; text-overflow:clip; min-width:0; font-size:7px; letter-spacing:.08em; line-height:1; }
+.wahead .lbl.c{ text-align:center; letter-spacing:.04em; }
+.warow{ display:grid; gap:6px; }
+.warow .cell{ color:var(--field-ink); border:1px solid #c8c1b0; border-top-color:#b7af9c;
+  border-radius:4px; min-height:23px; padding:2px 8px; font-size:13px; outline:none;
+  background-image:linear-gradient(180deg,var(--field-2),var(--field) 62%);
+  box-shadow:inset 0 1.5px 2.5px rgba(52,42,26,.2), inset 0 -1px 0 rgba(255,255,255,.55), 0 1px 0 rgba(255,255,255,.04);
+  white-space:nowrap; overflow:hidden; }
+.warow .cell.c{ text-align:center; font-weight:600; padding-left:2px; padding-right:2px; }
+.warow .cell:focus{ border-color:var(--red); box-shadow:inset 0 1.5px 2.5px rgba(52,42,26,.14), 0 0 0 2px var(--red-soft); }
+/* 4-column layout: Name · Atk/DC · Damage+Type · Mastery */
+.watable .wahead, .watable .warow{ grid-template-columns:minmax(118px,1fr) 32px minmax(100px,1.1fr) 60px; gap:4px; }
+.wnotes{ display:flex; flex-direction:column; gap:3px; }
+
+/* ============================================================
+   COMBAT ACTION ROWS (page 1 center + page 4 profile columns)
+   ============================================================ */
+.actrow{ flex:1; display:flex; min-height:0; background:var(--bg-2); border:1px solid var(--frame); border-radius:7px; overflow:hidden; }
+.actrow .vlabel{
+  writing-mode:vertical-rl; background:var(--bg-3);
+  border-left:3px solid var(--red); border-right:1px solid var(--frame);
+  color:var(--label); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+  font-weight:600; padding:6px 5px; display:flex; align-items:center; justify-content:center;
+  text-align:center; line-height:1.2; white-space:normal; flex:0 0 25px; }
+.actrow .ruled{ flex:1; border:none; border-radius:0; min-height:0; padding:4px 10px; background-position:0 3px; }
+/* flipped rows (right column, page 4) */
+.actrow.flip{ flex-direction:row-reverse; }
+.actrow.flip .vlabel{ border-left:1px solid var(--frame); border-right:3px solid var(--red); }
+
+/* ============================================================
+   CONDITIONS STRIP (page 1 bottom)
+   ============================================================ */
+.cond-strip{ display:flex; gap:5px; }
+.cflag{
+  -webkit-appearance:none; appearance:none; cursor:pointer;
+  flex:1 1 0; min-width:0; text-align:center;
+  font-family:'Space Mono',monospace; font-size:9px; letter-spacing:.04em; font-weight:700;
+  color:var(--label-dim); background:#191b1e; border:1px solid var(--frame); border-radius:5px;
+  padding:4px 2px; transition:.12s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.cflag:hover{ border-color:var(--red); color:var(--label); }
+.cflag.on{ background:var(--red); border-color:var(--red); color:#fff; box-shadow:0 0 6px var(--red-soft); }
+
+/* ============================================================
+   FEATURES & TRAITS PAGE (page 2)
+   ============================================================ */
+.feat-top{ display:flex; align-items:center; gap:12px; flex:0 0 auto; padding:1px 1px 2px; }
+.feat-top .sect-title{ font-size:13px; }
+.feat-legend{ margin-left:auto; display:flex; gap:6px; }
+.lg-chip{
+  font-size:8px; letter-spacing:.14em; text-transform:uppercase; font-weight:600;
+  padding:2px 8px; border-radius:4px; border:1px solid var(--frame); color:var(--label-dim); background:#191b1e;
+}
+.lg-chip.class{ border-color:var(--red); color:var(--red); }
+.lg-chip.sub{ border-color:var(--red-2); color:var(--red); }
+.lg-chip.species{ border-color:var(--ice); color:var(--ice-2); }
+.lg-chip.feat{ border-color:var(--steel); color:var(--steel-2); }
+.feat-page .panel-body{ padding:8px 9px; }
+.feat-controls{ flex:0 0 auto; display:flex; gap:8px; justify-content:center; padding-top:5px; }
+.feat-controls button{
+  font-family:'Space Mono',monospace; font-size:9px; letter-spacing:.14em; text-transform:uppercase;
+  cursor:pointer; color:var(--label); background:transparent;
+  border:1px solid var(--frame); border-radius:5px; padding:6px 14px; transition:.15s;
+}
+.feat-controls button:hover{ border-color:var(--red); color:var(--red); }
+.feat-controls .feat-remove:hover{ border-color:var(--steel-2); color:var(--steel-2); }
+
+/* ============================================================
+   SPELLCASTING HEADER (page 3)
+   ============================================================ */
+.spellcast-panel{ flex:0 0 auto; }
+.spellcast-panel .panel-body{ padding:7px 10px; }
+.spell-command{
+  flex:0 0 auto; display:grid; grid-template-columns:150px minmax(0,1fr); gap:10px; min-width:0;
+}
+.spell-fields{ display:grid; grid-template-columns:1fr; gap:4px; align-content:start; min-width:0; }
+.spell-fields .lbl{ font-size:7px; letter-spacing:.1em; }
+.spell-fields .field{ display:grid; grid-template-columns:52px minmax(0,1fr); gap:5px; align-items:center; }
+.spell-fields .field > .lbl{ padding-left:0; }
+.spell-fields .fbox{ min-height:20px; padding:2px 6px; font-size:11.5px; line-height:1.2; }
+.slot-panel{ min-width:0; display:flex; flex-direction:column; gap:5px; }
+.slot-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:5px 6px; }
+.slot{
+  display:grid; grid-template-columns:24px 34px 1fr; align-items:center; gap:6px;
+  background:var(--bg-2); border:1px solid var(--frame); border-radius:6px; padding:3px 7px;
+}
+.slot .lv{ font-family:'Space Mono',monospace; font-weight:700; font-size:12px; color:var(--red); text-align:center; line-height:1; }
+.slot .lv small{ display:block; font-size:7px; letter-spacing:.1em; color:var(--label-dim); font-weight:400; margin-top:1px; }
+.slot .total{
+  background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4;
+  border-radius:4px; min-width:32px; min-height:18px; text-align:center;
+  font-size:11.5px; font-weight:600; outline:none; padding:1px 4px;
+}
+.slot .pips{ display:flex; gap:3px; justify-content:flex-end; }
+.slot .dot{ width:10px; height:10px; border-width:1.2px; }
+
+/* ============================================================
+   CANTRIPS TABLE (page 3)
+   ============================================================ */
+.spell-table-panel{ flex:0 0 auto; min-height:0; }
+.spell-table-panel .panel-body{ min-height:0; }
+.row-add{
+  border:1px solid var(--frame); background:#1b2024; color:var(--label); border-radius:4px;
+  min-height:20px; padding:0 7px; font:700 8px/1 var(--mono); letter-spacing:.08em;
+  text-transform:uppercase; cursor:pointer;
+}
+.row-add:hover{ color:var(--field); border-color:var(--red); }
+.row-remove{
+  width:18px; height:22px; border:1px solid var(--frame); border-radius:4px;
+  background:#171b1f; color:var(--label); font:700 12px/1 var(--mono); cursor:pointer;
+}
+.row-remove:hover{ color:var(--red); border-color:var(--red); }
+.cantrip-list{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:0; }
+.cantrip-list .chead{ display:grid; grid-template-columns:20ch 4.8ch 4ch minmax(0,1fr); gap:5px; padding:0 2px 4px; }
+.cantrip-list .chead .lbl{ font-size:7.5px; letter-spacing:.04em; text-align:center; white-space:nowrap; overflow:hidden; color:var(--label); }
+.cantrip-list .chead .lbl.l{ text-align:left; }
+.crow{ display:grid; grid-template-columns:20ch 4.8ch 4ch minmax(0,1fr); gap:5px; align-items:stretch; min-height:28px; padding:3px 2px; border-top:1px solid var(--frame-soft); }
+.crow.spell-extra{ grid-template-columns:20ch 4.8ch 4ch minmax(0,1fr) 18px; }
+.crow:first-of-type{ border-top:none; }
+.crow .cn,
+.crow .rng,
+.crow .hit,
+.crow .fx{
+  background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4; border-radius:4px;
+  min-height:23px; padding:3px 6px; font-size:11.2px; outline:none; min-width:0; overflow:hidden;
+}
+.crow .rng,
+.crow .hit{ text-align:center; font-weight:600; padding-left:2px; padding-right:2px; }
+.crow .fx{ line-height:1.2; white-space:normal; }
+
+/* ============================================================
+   PREPARED SPELLS TABLE (page 3)
+   ============================================================ */
+.splist{ display:flex; flex-direction:column; gap:0; min-width:0; }
+.splist .shead{ display:grid; grid-template-columns:22px 22px 20ch 4.8ch 4ch minmax(0,1fr); gap:5px; padding:0 2px 4px; }
+.splist .shead .lbl{ font-size:7.5px; letter-spacing:.04em; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:clip; color:var(--label); }
+.splist .shead .lbl.l{ text-align:left; }
+.sprow{ display:grid; grid-template-columns:22px 22px 20ch 4.8ch 4ch minmax(0,1fr); gap:5px; align-items:center; padding:3px 2px; border-top:1px solid var(--frame-soft); min-width:0; }
+.sprow.spell-extra{ grid-template-columns:22px 22px 20ch 4.8ch 4ch minmax(0,1fr) 18px; }
+.sprow:first-of-type{ border-top:none; }
+.sprow .prep{ display:flex; justify-content:center; }
+.sprow .conc-mark{ display:flex; justify-content:center; }
+.sprow .nm,
+.sprow .rng,
+.sprow .hit,
+.sprow .fx{
+  background:var(--field); color:var(--field-ink); border:1px solid #d8d2c4; border-radius:4px;
+  min-height:23px; padding:3px 6px; font-size:11.2px; outline:none; min-width:0;
+  white-space:nowrap; overflow:hidden;
+}
+.sprow .rng,
+.sprow .hit{ text-align:center; font-weight:600; padding-left:2px; padding-right:2px; }
+.sprow .fx{ font-size:10.8px; }
+.sprow .nm:focus,
+.sprow .rng:focus,
+.sprow .hit:focus,
+.sprow .fx:focus{ border-color:var(--red); box-shadow:0 0 0 2px var(--red-soft); }
+
+/* ============================================================
+   GEAR & INVENTORY (page 3 bottom)
+   ============================================================ */
+.stores-stack{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:8px; }
+.stores-grid{ flex:1 1 auto; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.stores-grid .panel{ min-height:0; }
+.stores-grid .panel-h{ min-height:34px; }
+.stores-grid .panel-body{ flex:1 1 auto; min-height:0; }
+.stores-grid .ruled{ flex:1 1 auto !important; min-height:0; height:auto !important; }
+.header-ledger{ margin-left:auto; display:flex; align-items:center; gap:7px; min-width:0; }
+.inv-ledger{ display:flex; gap:8px; flex:0 0 auto; }
+.inv-ledger .field{ flex:1; }
+.header-ledger label{ display:flex; align-items:center; gap:4px; min-width:0; }
+.header-ledger .lbl{ font-size:7.5px; letter-spacing:.04em; color:var(--label); padding:0; }
+.header-ledger .mini-ledger{
+  width:58px; min-height:18px; padding:1px 4px; display:inline-flex; align-items:center; justify-content:center;
+  font-family:'Space Mono',monospace; font-size:10.5px; font-weight:700; line-height:1; text-align:center;
+}
+
+/* ============================================================
+   PROFILE PAGE (page 4)
+   ============================================================ */
+.profile-main{ display:grid; grid-template-columns:minmax(0,1fr) 300px minmax(0,1fr); gap:10px; flex:1 1 auto; min-height:0; }
+.profile-col{ display:flex; flex-direction:column; gap:8px; min-width:0; min-height:0; }
+.profile-col > .actrow{ flex:1 1 0; min-height:0; }
+.profile-center{ min-width:0; min-height:0; display:flex; flex-direction:column; gap:8px; }
+.profile-center > .designation{ order:1; }
+.profile-center > .identity-panel{ order:2; }
+.profile-center > .portrait2{ order:3; }
+
+.designation{ display:flex; align-items:center; gap:8px; background:var(--bg-3); border:1px solid var(--frame); border-radius:6px; padding:6px 9px; }
+.designation .tag{ font-family:'Space Mono',monospace; font-size:8px; letter-spacing:.2em; color:var(--red); text-transform:uppercase; white-space:nowrap; }
+.designation .fbox{ flex:1; min-height:22px; font-family:'Space Mono',monospace; letter-spacing:.12em; font-size:11px; }
+
+.identity-panel{ flex:0 0 auto; }
+.identity-panel .panel-body{ gap:6px; padding:8px 9px; }
+.identity-panel .fbox{ min-height:24px; padding:4px 7px; font-size:12px; }
+
+.rp-details{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.rp-details .lbl{ font-size:7px; letter-spacing:.1em; }
+.rp-details .fbox{ text-align:center; font-size:11.5px; }
+
+.portrait2{ position:relative; width:100%; flex:1 1 0; min-height:240px; }
+.portrait2 .pslot{ display:block; width:100%; height:100%; border:1px solid var(--frame); border-radius:12px; background:radial-gradient(circle at 50% 36%, #2b2f33 0%, #161719 78%); }
+.portrait2 .corner{ position:absolute; width:18px; height:18px; pointer-events:none; z-index:3; }
+.portrait2 .corner.tl{ top:7px; left:7px; border-top:2px solid var(--red); border-left:2px solid var(--red); }
+.portrait2 .corner.tr{ top:7px; right:7px; border-top:2px solid var(--red); border-right:2px solid var(--red); }
+.portrait2 .corner.bl{ bottom:7px; left:7px; border-bottom:2px solid var(--steel); border-left:2px solid var(--steel); }
+.portrait2 .corner.br{ bottom:7px; right:7px; border-bottom:2px solid var(--steel); border-right:2px solid var(--steel); }
+.portrait2 image-slot::part(empty){ color:var(--label); font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+
+.profile-bottom{ display:flex; gap:10px; flex:0 0 200px; min-height:0; }
+.profile-bottom .actrow{ min-width:0; }
+/* profile actrow ruled fields grow freely — skip snapRuled */
+.profile-main .actrow .ruled,
+.profile-bottom .actrow .ruled{ flex:1 1 auto !important; height:auto !important; width:auto; }
+
+/* ============================================================
+   RECESSED FIELD SURFACES — "milled cutout" plate effect
+   All cream-coloured editable elements share this treatment.
+   ============================================================ */
+/* gradient inlay — NOT applied to .ruled (keeps its ruled lines) */
+.fbox, .sb-val,
+.stat .val,
+.ab-head .ab-score, .ab-head .sbox, .sk-row .mb,
+.sprow .nm, .sprow .rng, .sprow .hit, .sprow .fx,
+.crow .cn, .crow .rng, .crow .hit, .crow .fx,
+.slot .total{
+  background-image:linear-gradient(180deg, var(--field-2), var(--field) 62%);
+}
+/* recess shadow + milled keyline (applied to .ruled too) */
+.fbox, .ruled, .sb-val,
+.stat .val,
+.ab-head .ab-score, .ab-head .sbox, .sk-row .mb,
+.sprow .nm, .sprow .rng, .sprow .hit, .sprow .fx,
+.crow .cn, .crow .rng, .crow .hit, .crow .fx,
+.slot .total{
+  border-color:#c8c1b0; border-top-color:#b7af9c;
+  box-shadow:
+    inset 0 1.5px 2.5px rgba(52,42,26,.20),
+    inset 0 -1px 0 rgba(255,255,255,.55),
+    0 1px 0 rgba(255,255,255,.04);
+}
+/* focus ring */
+.fbox:focus, .ruled:focus, .sb-val:focus,
+.sprow .nm:focus, .sprow .rng:focus, .sprow .hit:focus, .sprow .fx:focus,
+.crow .cn:focus, .crow .rng:focus, .crow .hit:focus, .crow .fx:focus,
+.ab-head .ab-score:focus, .ab-head .sbox:focus, .sk-row .mb:focus,
+.slot .total:focus{
+  border-color:var(--red);
+  box-shadow: inset 0 1.5px 2.5px rgba(52,42,26,.14), 0 0 0 2px var(--red-soft);
+}
+/* dark modifier pills — pressed into slate */
+.ab-head .ab-mod{
+  background:linear-gradient(180deg,#101216,#191c20);
+  border-color:#0c0e11;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.55), inset 0 -1px 0 rgba(255,255,255,.05);
+}
+/* machined plate shadow on containers */
+.panel{ box-shadow: inset 0 1px 0 rgba(255,255,255,.035), 0 1px 3px rgba(0,0,0,.28); }
+.stat, .slot, .deaths, .designation{
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03), 0 1px 2px rgba(0,0,0,.22);
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print{
+  .feat-controls{ display:none !important; }
+  @page{ size:A4 portrait; margin:0; }
+  html,body{ background:#fff; padding:0; }
+  .toolbar{ display:none !important; }
+  .page{
+    margin:0; box-shadow:none; page-break-after:always; break-after:page;
+    -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  .page:last-child{ page-break-after:auto; }
+}
