@@ -55,18 +55,22 @@
     return CACHE_PREFIX + slug;
   }
 
+  function hasUsableSheetData(data){
+    return !!(data && typeof data === 'object' && data.fields && Object.keys(data.fields).length);
+  }
+
   function readCachedCharacter(){
     if (!slug) return null;
     try {
       var cached = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
-      return cached && cached.sheet_data ? cached : null;
+      return cached && hasUsableSheetData(cached.sheet_data) ? cached : null;
     } catch (err) {
       return null;
     }
   }
 
   function writeCachedCharacter(character){
-    if (!slug || !character) return;
+    if (!slug || !character || !hasUsableSheetData(character.sheet_data)) return;
     try {
       localStorage.setItem(cacheKey(), JSON.stringify({
         slug: character.slug || slug,
@@ -115,6 +119,7 @@
 
   function applyRemoteCharacter(character, options){
     if (!character || !window.AegisSheet) return;
+    if (!hasUsableSheetData(character.sheet_data)) return;
     currentCharacter = character;
     setTitle(character);
     window.AegisSheet.applyState(character.sheet_data || {}, { skipSave: true });
@@ -217,8 +222,13 @@
           var record = payload && payload.new;
           if (!record || record.slug !== slug || !canApplyIncoming()) return;
           if (currentCharacter && record.updated_at && record.updated_at === currentCharacter.updated_at) return;
-          applyRemoteCharacter(record);
-          setStatus(isEdit ? 'Updated from cloud' : 'Live updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), isEdit ? 'edit' : 'saved');
+          fetchCharacter(true).then(function(fresh){
+            if (!fresh || !canApplyIncoming()) return;
+            applyRemoteCharacter(fresh);
+            setStatus(isEdit ? 'Updated from cloud' : 'Live updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), isEdit ? 'edit' : 'saved');
+          }).catch(function(err){
+            console.warn('Realtime refresh failed; polling remains active.', err);
+          });
         })
         .subscribe(function(status, err){
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
