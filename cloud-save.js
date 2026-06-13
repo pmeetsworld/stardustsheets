@@ -55,22 +55,22 @@
     return CACHE_PREFIX + slug;
   }
 
-  function hasUsableSheetData(data){
-    return !!(data && typeof data === 'object' && data.fields && Object.keys(data.fields).length);
+  function isSheetDataObject(data){
+    return !!(data && typeof data === 'object' && !Array.isArray(data));
   }
 
   function readCachedCharacter(){
     if (!slug) return null;
     try {
       var cached = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
-      return cached && hasUsableSheetData(cached.sheet_data) ? cached : null;
+      return cached && isSheetDataObject(cached.sheet_data) ? cached : null;
     } catch (err) {
       return null;
     }
   }
 
   function writeCachedCharacter(character){
-    if (!slug || !character || !hasUsableSheetData(character.sheet_data)) return;
+    if (!slug || !character || !isSheetDataObject(character.sheet_data)) return;
     try {
       localStorage.setItem(cacheKey(), JSON.stringify({
         slug: character.slug || slug,
@@ -119,7 +119,7 @@
 
   function applyRemoteCharacter(character, options){
     if (!character || !window.AegisSheet) return;
-    if (!hasUsableSheetData(character.sheet_data)) return;
+    if (!isSheetDataObject(character.sheet_data)) return;
     currentCharacter = character;
     setTitle(character);
     window.AegisSheet.applyState(character.sheet_data || {}, { skipSave: true });
@@ -299,6 +299,8 @@
       cachedApplied = true;
       applyRemoteCharacter(cached, { cached: true });
       setStatus('Refreshing cloud...', 'loading');
+    } else if (slug) {
+      window.AegisSheet.applyState({}, { skipSave: true });
     }
 
     try {
