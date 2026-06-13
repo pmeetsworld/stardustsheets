@@ -9,6 +9,10 @@
   var currentCharacter = null;
   var saveTimer = null;
   var loading = true;
+  var dirty = false;
+  var saveInFlight = false;
+  var pollTimer = null;
+  var POLL_MS = 10000;
 
   function apiUrl(path){
     return config.supabaseUrl.replace(/\/$/, '') + '/rest/v1/' + path;
@@ -42,16 +46,17 @@
     return encodeURIComponent(value);
   }
 
-  async function fetchCharacter(){
+  async function fetchCharacter(silent){
     if (!slug) {
       setStatus('Local mode - no character selected', 'local');
       if (window.AegisSheet) window.AegisSheet.setReadOnly(false);
       return null;
     }
 
-    setStatus('Loading ' + slug + '...', 'loading');
+    if (!silent) setStatus('Loading ' + slug + '...', 'loading');
     var res = await fetch(apiUrl('characters?slug=eq.' + encode(slug) + '&select=slug,name,player_name,sheet_data,updated_at'), {
-      headers: headers()
+      headers: headers({ 'Cache-Control': 'no-cache' }),
+      cache: 'no-store'
     });
     if (!res.ok) throw new Error('Load failed: ' + res.status + ' ' + await res.text());
     var rows = await res.json();
@@ -59,39 +64,77 @@
     return rows[0];
   }
 
+  function applyRemoteCharacter(character){
+    if (!character || !window.AegisSheet) return;
+    currentCharacter = character;
+    setTitle(character);
+    window.AegisSheet.applyState(character.sheet_data || {}, { skipSave: true });
+    window.AegisSheet.setReadOnly(!isEdit);
+  }
+
   async function saveCharacterNow(){
     if (!slug || !editKey || !window.AegisSheet || loading) return;
     var state = window.AegisSheet.getState();
     setStatus('Saving...', 'saving');
-    var res = await fetch(apiUrl('characters?slug=eq.' + encode(slug) + '&select=slug,updated_at'), {
-      method: 'PATCH',
-      headers: headers({
-        Prefer: 'return=representation',
-        'x-edit-key': editKey
-      }),
-      body: JSON.stringify({
-        sheet_data: state,
-        updated_at: new Date().toISOString()
-      })
-    });
-    if (!res.ok) {
-      setStatus('Save failed', 'error');
-      throw new Error('Save failed: ' + res.status + ' ' + await res.text());
+    saveInFlight = true;
+    try {
+      var res = await fetch(apiUrl('characters?slug=eq.' + encode(slug) + '&select=slug,updated_at'), {
+        method: 'PATCH',
+        headers: headers({
+          Prefer: 'return=representation',
+          'x-edit-key': editKey
+        }),
+        cache: 'no-store',
+        body: JSON.stringify({
+          sheet_data: state,
+          updated_at: new Date().toISOString()
+        })
+      });
+      if (!res.ok) {
+        setStatus('Save failed', 'error');
+        throw new Error('Save failed: ' + res.status + ' ' + await res.text());
+      }
+      var rows = await res.json();
+      if (!rows.length) {
+        setStatus('Save denied - bad edit link', 'error');
+        throw new Error('Save denied: edit key did not match this character.');
+      }
+      if (currentCharacter) currentCharacter.updated_at = rows[0].updated_at;
+      dirty = false;
+      setStatus('Saved ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
+    } finally {
+      saveInFlight = false;
     }
-    var rows = await res.json();
-    if (!rows.length) {
-      setStatus('Save denied - bad edit link', 'error');
-      throw new Error('Save denied: edit key did not match this character.');
-    }
-    setStatus('Saved ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
   }
 
   function queueSave(){
     if (!isEdit || loading) return;
+    dirty = true;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function(){
+      saveTimer = null;
       saveCharacterNow().catch(function(err){ console.error(err); });
     }, 650);
+  }
+
+  async function refreshFromCloud(){
+    if (!slug || loading || saveInFlight || saveTimer || dirty) return;
+    try {
+      var fresh = await fetchCharacter(true);
+      if (!fresh) return;
+      var oldStamp = currentCharacter && currentCharacter.updated_at;
+      if (fresh.updated_at && fresh.updated_at !== oldStamp) {
+        applyRemoteCharacter(fresh);
+        setStatus(isEdit ? 'Updated from cloud' : 'Live updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), isEdit ? 'edit' : 'saved');
+      }
+    } catch (err) {
+      console.warn('Cloud refresh failed:', err);
+    }
+  }
+
+  function startPolling(){
+    if (!slug || pollTimer) return;
+    pollTimer = setInterval(refreshFromCloud, POLL_MS);
   }
 
   function initExportImport(){
@@ -135,13 +178,12 @@
   async function boot(){
     initExportImport();
     if (!window.AegisSheet) return setStatus('Sheet API unavailable', 'error');
+    if (slug && !isEdit) window.AegisSheet.setReadOnly(true);
 
     try {
       currentCharacter = await fetchCharacter();
       if (currentCharacter) {
-        setTitle(currentCharacter);
-        window.AegisSheet.applyState(currentCharacter.sheet_data || {}, { skipSave: true });
-        window.AegisSheet.setReadOnly(!isEdit);
+        applyRemoteCharacter(currentCharacter);
         setStatus(isEdit ? 'Edit mode - saved to cloud' : 'View only', isEdit ? 'edit' : 'view');
       }
     } catch (err) {
@@ -153,6 +195,7 @@
     }
 
     window.AegisSheet.onChange(queueSave);
+    startPolling();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

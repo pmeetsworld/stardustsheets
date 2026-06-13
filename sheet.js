@@ -71,6 +71,7 @@
     return {
       fields: fields,
       toggles: toggles,
+      images: window.AegisImages ? window.AegisImages.getState() : {},
       featurePages: store['feat.added'] || [],
       cantripRows: currentSpellRows('cantrip'),
       spellRows: currentSpellRows('spell')
@@ -96,6 +97,7 @@
     initFields();
     initToggles();
     wireSpellRowControls();
+    if (window.AegisImages) window.AegisImages.applyState(state && state.images ? state.images : {}, { silent: true });
 
     document.querySelectorAll('[data-k]').forEach(function(el){
       var k = el.getAttribute('data-k');
@@ -118,6 +120,7 @@
     document.querySelectorAll('[data-t], .feat-add, .feat-remove, .spell-add, .row-remove, #resetBtn').forEach(function(el){
       el.disabled = !!readOnly;
     });
+    if (window.AegisImages) window.AegisImages.setReadOnly(!!readOnly);
   }
 
   /* ============================================================
@@ -362,6 +365,7 @@
     initFields();
     initToggles();
     wireSpellRowControls();
+    if (window.AegisImages) window.AegisImages.onChange(save);
     document.querySelectorAll('.feat-add').forEach(function(b){
       if (!b.__wiredAdd){ b.__wiredAdd = 1; b.addEventListener('click', onAdd); }
     });

@@ -50,6 +50,7 @@
 
 (() => {
   const STATE_FILE = '.image-slots.state.json';
+  const LOCAL_KEY = 'aegis-image-slots-v1';
   // 2× a ~600px slot in a 1920-wide deck — retina-sharp without making the
   // sidecar enormous. A 1200px WebP at q=0.85 is ~150-300KB.
   const MAX_DIM = 1200;
@@ -65,13 +66,30 @@
   // are served together; writes go through window.omelette.writeFile, which
   // the host allowlists to *.state.json basenames only.
   const subs = new Set();
+  const imageListeners = new Set();
   let slots = {};
+  try { slots = JSON.parse(localStorage.getItem(LOCAL_KEY) || '{}') || {}; } catch (e) { slots = {}; }
   // ids explicitly cleared before the sidecar fetch resolved — otherwise
   // the merge below can't tell "never set" from "just deleted" and would
   // resurrect the sidecar's stale value.
   const tombstones = new Set();
   let loaded = false;
   let loadP = null;
+
+  function clone(v) {
+    try { return JSON.parse(JSON.stringify(v || {})); } catch (e) { return {}; }
+  }
+
+  function persistLocal() {
+    try { localStorage.setItem(LOCAL_KEY, JSON.stringify(slots)); } catch (e) {}
+  }
+
+  function emitChange() {
+    const state = clone(slots);
+    imageListeners.forEach((fn) => {
+      try { fn(state); } catch (e) {}
+    });
+  }
 
   function load() {
     if (loadP) return loadP;
@@ -131,7 +149,9 @@
     if (!id) return;
     if (val) { slots[id] = val; tombstones.delete(id); }
     else { delete slots[id]; if (!loaded) tombstones.add(id); }
+    persistLocal();
     subs.forEach((fn) => fn());
+    emitChange();
     // A drop is rare + high-value — write immediately so nav-away can't lose
     // it. Gate on the initial read so we don't overwrite a sidecar we haven't
     // merged yet; the merge in load() keeps this change once the read lands.
@@ -143,6 +163,21 @@
   // raw upload. Longest side is capped at 2× the slot's rendered width
   // (retina) and at MAX_DIM. WebP keeps alpha and is ~10× smaller than PNG
   // for photos, so there's no need for per-image format picking.
+  function applySlots(next, options) {
+    options = options || {};
+    slots = clone(next);
+    tombstones.clear();
+    persistLocal();
+    subs.forEach((fn) => fn());
+    if (!options.silent) emitChange();
+  }
+
+  function setReadOnly(readOnly) {
+    document.querySelectorAll('image-slot').forEach((slot) => {
+      slot.toggleAttribute('readonly', !!readOnly);
+    });
+  }
+
   async function toDataUrl(file, targetW) {
     const bitmap = await createImageBitmap(file);
     try {
@@ -226,7 +261,7 @@
 
   class ImageSlot extends HTMLElement {
     static get observedAttributes() {
-      return ['shape', 'radius', 'mask', 'fit', 'position', 'placeholder', 'src', 'id'];
+      return ['shape', 'radius', 'mask', 'fit', 'position', 'placeholder', 'src', 'id', 'readonly'];
     }
 
     constructor() {
@@ -267,8 +302,9 @@
       this._subFn = () => this._render();
       // Shadow-DOM listeners live with the shadow DOM — bound once here so
       // disconnect/reconnect (e.g. React remount) doesn't stack handlers.
-      this._empty.addEventListener('click', () => this._input.click());
+      this._empty.addEventListener('click', () => { if (this._editable()) this._input.click(); });
       root.addEventListener('click', (e) => {
+        if (!this._editable()) return;
         const act = e.target && e.target.getAttribute && e.target.getAttribute('data-act');
         if (act === 'replace') { this._exitReframe(true); this._input.click(); }
         if (act === 'clear') {
@@ -279,6 +315,7 @@
         }
       });
       this._input.addEventListener('change', () => {
+        if (!this._editable()) { this._input.value = ''; return; }
         const f = this._input.files && this._input.files[0];
         if (f) this._ingest(f);
         this._input.value = '';
@@ -289,7 +326,7 @@
       // Gated on editable + fit=cover so share links and contain/fill slots
       // stay static.
       this.addEventListener('dblclick', (e) => {
-        if (!this.hasAttribute('data-editable') || !this._reframes()) return;
+        if (!this._editable() || !this._reframes()) return;
         e.preventDefault();
         if (this.hasAttribute('data-reframe')) this._exitReframe(true);
         else this._enterReframe();
@@ -445,6 +482,14 @@
     // handleEvent — one listener object for all four drag events keeps the
     // add/remove symmetric and the depth counter correct.
     handleEvent(e) {
+      if (!this._editable()) {
+        if (e.type === 'dragover' || e.type === 'drop') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        this.removeAttribute('data-over');
+        return;
+      }
       if (e.type === 'dragenter' || e.type === 'dragover') {
         // Without preventDefault the browser never fires 'drop'.
         e.preventDefault();
@@ -467,6 +512,7 @@
     }
 
     async _ingest(file) {
+      if (!this._editable()) return;
       this._setError(null);
       if (!file || ACCEPT.indexOf(file.type) < 0) {
         this._setError('Drop a PNG, JPEG, WebP, or AVIF image.');
@@ -507,6 +553,10 @@
 
     // Reframing (pan/resize) is only meaningful for fit=cover — contain/fill
     // keep the old object-fit path and double-click is a no-op.
+    _editable() {
+      return !this.hasAttribute('readonly');
+    }
+
     _reframes() {
       return this.hasAttribute('data-filled') &&
         (this.getAttribute('fit') || 'cover') === 'cover';
@@ -593,7 +643,7 @@
       this._ring.style.display = mask ? 'none' : '';
 
       // Controls and reframe entry gate on this so share links stay read-only.
-      const editable = !!(window.omelette && window.omelette.writeFile);
+      const editable = this._editable();
       this.toggleAttribute('data-editable', editable);
       this._sub.style.display = editable ? '' : 'none';
 
@@ -636,6 +686,19 @@
       }
     }
   }
+
+  window.AegisImages = {
+    getState: function() {
+      return clone(slots);
+    },
+    applyState: function(next, options) {
+      applySlots(next || {}, options);
+    },
+    onChange: function(fn) {
+      if (typeof fn === 'function') imageListeners.add(fn);
+    },
+    setReadOnly: setReadOnly
+  };
 
   if (!customElements.get('image-slot')) {
     customElements.define('image-slot', ImageSlot);
