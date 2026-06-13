@@ -9,6 +9,8 @@
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){ store = {}; }
   var changeListeners = [];
+  var imageChangeWired = false;
+  var pendingImages = null;
 
   function save(){
     try { localStorage.setItem(KEY, JSON.stringify(store)); } catch(e){}
@@ -17,6 +19,30 @@
     });
   }
   function pad(n){ return (n < 10 ? '0' : '') + n; }
+
+  function imagesApi(){
+    return window.AegisImages || globalThis.AegisImages || null;
+  }
+
+  function applyImages(images, silent){
+    var api = imagesApi();
+    if (api) {
+      api.applyState(images || {}, { silent: !!silent });
+      pendingImages = null;
+    } else {
+      pendingImages = images || {};
+    }
+  }
+
+  function wireImageChanges(){
+    var api = imagesApi();
+    if (!api) return;
+    if (!imageChangeWired) {
+      imageChangeWired = true;
+      api.onChange(save);
+    }
+    if (pendingImages) applyImages(pendingImages, true);
+  }
 
   /* ---- editable text fields ([data-k]) -------------------- */
   function wireField(el){
@@ -71,7 +97,7 @@
     return {
       fields: fields,
       toggles: toggles,
-      images: window.AegisImages ? window.AegisImages.getState() : {},
+      images: imagesApi() ? imagesApi().getState() : {},
       featurePages: store['feat.added'] || [],
       cantripRows: currentSpellRows('cantrip'),
       spellRows: currentSpellRows('spell')
@@ -97,7 +123,7 @@
     initFields();
     initToggles();
     wireSpellRowControls();
-    if (window.AegisImages) window.AegisImages.applyState(state && state.images ? state.images : {}, { silent: true });
+    applyImages(state && state.images ? state.images : {}, true);
 
     document.querySelectorAll('[data-k]').forEach(function(el){
       var k = el.getAttribute('data-k');
@@ -120,7 +146,7 @@
     document.querySelectorAll('[data-t], .feat-add, .feat-remove, .spell-add, .row-remove, #resetBtn').forEach(function(el){
       el.disabled = !!readOnly;
     });
-    if (window.AegisImages) window.AegisImages.setReadOnly(!!readOnly);
+    if (imagesApi()) imagesApi().setReadOnly(!!readOnly);
   }
 
   /* ============================================================
@@ -365,7 +391,8 @@
     initFields();
     initToggles();
     wireSpellRowControls();
-    if (window.AegisImages) window.AegisImages.onChange(save);
+    wireImageChanges();
+    window.addEventListener('aegis-images-ready', wireImageChanges);
     document.querySelectorAll('.feat-add').forEach(function(b){
       if (!b.__wiredAdd){ b.__wiredAdd = 1; b.addEventListener('click', onAdd); }
     });

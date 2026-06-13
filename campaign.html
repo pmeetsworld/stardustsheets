@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
 <script>
 (function(){
-  var build = '20260613g';
+  var build = '20260613h';
   if (location.protocol === 'file:') return;
   var params = new URLSearchParams(location.search);
   if (params.get('app') === build) return;
@@ -17,7 +17,7 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613g">
+<link rel="stylesheet" href="styles.css?v=20260613h">
 <style>
 body{ padding:48px 16px; min-height:100vh; }
 .roster-shell{
@@ -52,9 +52,9 @@ body{ padding:48px 16px; min-height:100vh; }
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use each player's secret edit link to update that character.</p>
   </main>
-  <script src="cloud-config.js?v=20260613g"></script>
+  <script src="cloud-config.js?v=20260613h"></script>
   <script>
-    const APP_VERSION = '20260613g';
+    const APP_VERSION = '20260613h';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `

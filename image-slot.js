@@ -687,7 +687,7 @@
     }
   }
 
-  window.AegisImages = {
+  const aegisImagesApi = {
     getState: function() {
       return clone(slots);
     },
@@ -699,6 +699,9 @@
     },
     setReadOnly: setReadOnly
   };
+  window.AegisImages = aegisImagesApi;
+  globalThis.AegisImages = aegisImagesApi;
+  window.dispatchEvent(new CustomEvent('aegis-images-ready'));
 
   if (!customElements.get('image-slot')) {
     customElements.define('image-slot', ImageSlot);
