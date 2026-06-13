@@ -14,6 +14,9 @@
   var pollTimer = null;
   var POLL_MS = 10000;
   var CACHE_PREFIX = 'aegis-cloud-character-v1:';
+  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  var realtimeClient = null;
+  var realtimeChannel = null;
 
   function apiUrl(path){
     return config.supabaseUrl.replace(/\/$/, '') + '/rest/v1/' + path;
@@ -119,6 +122,10 @@
     if (!options || !options.cached) writeCachedCharacter(character);
   }
 
+  function canApplyIncoming(){
+    return !dirty && !saveInFlight && !saveTimer;
+  }
+
   async function saveCharacterNow(){
     if (!slug || !editKey || !window.AegisSheet || loading) return;
     var state = window.AegisSheet.getState();
@@ -186,6 +193,41 @@
   function startPolling(){
     if (!slug || pollTimer) return;
     pollTimer = setInterval(refreshFromCloud, POLL_MS);
+  }
+
+  async function startRealtime(){
+    if (!slug || realtimeChannel || !config.supabaseUrl || !config.supabaseKey) return;
+    try {
+      var mod = await import(SUPABASE_JS_URL);
+      realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+      realtimeChannel = realtimeClient
+        .channel('aegis-character-' + slug)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'characters',
+          filter: 'slug=eq.' + slug
+        }, function(payload){
+          var record = payload && payload.new;
+          if (!record || record.slug !== slug || !canApplyIncoming()) return;
+          if (currentCharacter && record.updated_at && record.updated_at === currentCharacter.updated_at) return;
+          applyRemoteCharacter(record);
+          setStatus(isEdit ? 'Updated from cloud' : 'Live updated ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), isEdit ? 'edit' : 'saved');
+        })
+        .subscribe(function(status, err){
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Realtime unavailable; polling remains active.', err || status);
+          }
+        });
+    } catch (err) {
+      console.warn('Realtime unavailable; polling remains active.', err);
+    }
   }
 
   function wireResumeRefresh(){
@@ -269,6 +311,7 @@
 
     window.AegisSheet.onChange(queueSave);
     startPolling();
+    startRealtime();
     wireResumeRefresh();
   }
 
