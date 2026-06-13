@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613k';
+  var BUILD = window.AEGIS_BUILD || '20260613l';
   var PASSWORD = 'AEGIS DM 712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -128,6 +128,19 @@
     return Math.max(0, Math.min(100, Math.round((current / max) * 100)));
   }
 
+  function healthStatus(current, max){
+    if (!max || max <= 0) {
+      return { label: 'Unknown', className: 'is-unknown' };
+    }
+    if (current <= 0) {
+      return { label: 'Incapacitated', className: 'is-incapacitated' };
+    }
+    if (current <= max / 2) {
+      return { label: 'Bloodied', className: 'is-bloodied' };
+    }
+    return { label: 'Healthy', className: 'is-healthy' };
+  }
+
   function hpBar(current, max, tempHp){
     var pct = hpPercent(current, max);
     var gradientWidth = pct > 0 ? (10000 / pct) : 100;
@@ -142,21 +155,22 @@
     ].join('');
   }
 
-  function hiddenPcHp(){
-    return '<div class="dm-hp-hidden" aria-label="Player HP hidden"><span>HP hidden</span></div>';
+  function hiddenPcHp(current, max){
+    var status = healthStatus(current, max);
+    return '<div class="dm-hp-hidden ' + status.className + '" aria-label="Player health status: ' + status.label + '"><span>' + status.label + '</span></div>';
   }
 
   function pcHpBar(current, max, tempHp){
-    return pcHpVisible ? hpBar(current, max, tempHp) : hiddenPcHp();
+    return pcHpVisible ? hpBar(current, max, tempHp) : hiddenPcHp(current, max);
   }
 
   function syncPcHpToggle(){
     document.body.classList.toggle('pc-hp-hidden', !pcHpVisible);
     if (!els.togglePcHpBtn) return;
     els.togglePcHpBtn.setAttribute('aria-pressed', pcHpVisible ? 'false' : 'true');
-    els.togglePcHpBtn.title = pcHpVisible ? 'Hide player HP' : 'Show player HP';
+    els.togglePcHpBtn.title = pcHpVisible ? 'Show player health status' : 'Show exact player HP';
     var label = els.togglePcHpBtn.querySelector('span');
-    if (label) label.textContent = pcHpVisible ? 'PC HP' : 'PC HP hidden';
+    if (label) label.textContent = pcHpVisible ? 'PC HP' : 'PC Status';
   }
 
   function hasCloudConfig(){

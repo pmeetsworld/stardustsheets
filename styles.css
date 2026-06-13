@@ -999,6 +999,38 @@ body.dm-screen-body{
   letter-spacing:.14em;
   text-transform:uppercase;
 }
+.dm-hp-hidden span{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+}
+.dm-hp-hidden span::before{
+  content:'';
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:currentColor;
+  box-shadow:0 0 10px currentColor;
+}
+.dm-hp-hidden.is-healthy{
+  border-color:rgba(57,215,125,.42);
+  color:#8ee7b0;
+  background:linear-gradient(180deg,rgba(27,48,37,.78),rgba(12,20,17,.92));
+}
+.dm-hp-hidden.is-bloodied{
+  border-color:rgba(240,200,75,.5);
+  color:#f0c84b;
+  background:linear-gradient(180deg,rgba(55,45,20,.78),rgba(22,18,11,.92));
+}
+.dm-hp-hidden.is-incapacitated{
+  border-color:rgba(255,90,60,.55);
+  color:var(--red);
+  background:linear-gradient(180deg,rgba(61,24,19,.78),rgba(23,12,10,.92));
+}
+.dm-hp-hidden.is-unknown{
+  border-color:rgba(127,153,189,.45);
+  color:var(--label-dim);
+}
 .dm-stat-row{
   display:flex;
   justify-content:space-between;
