@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>AEGIS SOLUTIONS - DM Screen</title>
+<script>
+(function(){
+  var build = '20260613j';
+  window.AEGIS_BUILD = build;
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
+  }
+  if (location.protocol === 'file:') return;
+  var params = new URLSearchParams(location.search);
+  if (params.get('app') === build) return;
+  params.set('app', build);
+  location.replace(location.pathname + '?' + params.toString() + location.hash);
+})();
+</script>
+<link rel="stylesheet" href="styles.css?v=20260613j">
+</head>
+<body class="dm-screen-body">
+  <div class="toolbar">
+    <a class="brand brand-link" href="campaign.html?app=20260613j" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <span class="hint">Dungeon Master Screen</span>
+    <span class="spacer"></span>
+    <a class="nav-btn" href="campaign.html?app=20260613j">Roster</a>
+    <a class="nav-btn" href="sheet.html?app=20260613j">Blank Sheet</a>
+    <span class="hint" id="dmCloudStatus">Locked</span>
+  </div>
+
+  <section class="dm-lock" id="dmLock" aria-labelledby="dmLockTitle">
+    <div class="dm-lock-card">
+      <svg class="emblem" viewBox="0 0 40 44" fill="none" aria-hidden="true"><path d="M20 2 L37 9 V24 C37 34 29 40 20 43 C11 40 3 34 3 24 V9 Z" stroke="currentColor" stroke-width="2"/><path d="M20 11 L28 31 H23.2 L20 22.5 L16.8 31 H12 Z" fill="currentColor"/></svg>
+      <p class="dm-kicker">P.O.D. 712</p>
+      <h1 id="dmLockTitle">DM Access</h1>
+      <form id="dmUnlockForm">
+        <label class="dm-password-label" for="dmPassword">Access Code</label>
+        <input id="dmPassword" class="dm-password-input" type="password" autocomplete="current-password" autofocus>
+        <button type="submit" class="dm-primary">Unlock</button>
+      </form>
+      <p class="dm-lock-error" id="dmLockError" role="alert"></p>
+    </div>
+  </section>
+
+  <main class="dm-app" id="dmApp" hidden>
+    <nav class="dm-mobile-nav" aria-label="DM screen sections">
+      <a href="#dmParty">Party</a>
+      <a href="#dmNotes">Notes</a>
+      <a href="#dmCombat">Combat</a>
+    </nav>
+
+    <section class="dm-shell">
+      <section class="dm-section" id="dmParty">
+        <div class="dm-section-head">
+          <div>
+            <p class="dm-kicker">Live Character Feed</p>
+            <h2>Live Party</h2>
+          </div>
+          <button type="button" class="dm-small" id="refreshPartyBtn">Refresh</button>
+        </div>
+        <div class="dm-party-grid" id="partyGrid"></div>
+      </section>
+
+      <section class="dm-section dm-notes-section" id="dmNotes">
+        <div class="dm-section-head">
+          <div>
+            <p class="dm-kicker">Archive</p>
+            <h2>Session Notes</h2>
+          </div>
+          <div class="dm-actions">
+            <button type="button" class="dm-small" id="newSessionBtn">New Session</button>
+            <button type="button" class="dm-primary" id="saveSessionBtn">Save Session</button>
+          </div>
+        </div>
+        <div class="dm-session-meta">
+          <label>
+            <span class="lbl">Date</span>
+            <input id="sessionDate" class="dm-input" type="date">
+          </label>
+          <label>
+            <span class="lbl">Title</span>
+            <input id="sessionTitle" class="dm-input" type="text" placeholder="Session title">
+          </label>
+          <span class="dm-status" id="sessionStatus">No session loaded</span>
+        </div>
+        <div class="dm-notes-layout">
+          <div class="dm-note-fields">
+            <div class="dm-ruled" id="sessionNotesA" contenteditable="true" data-plain="true" aria-label="Session notes field A"></div>
+            <div class="dm-ruled" id="sessionNotesB" contenteditable="true" data-plain="true" aria-label="Session notes field B"></div>
+          </div>
+          <aside class="dm-sessions-panel">
+            <div class="dm-subhead">
+              <span>Saved Sessions</span>
+              <button type="button" class="dm-text-btn" id="reloadSessionsBtn">Reload</button>
+            </div>
+            <div class="dm-session-list" id="sessionList"></div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="dm-section dm-combat-section" id="dmCombat">
+        <div class="dm-section-head">
+          <div>
+            <p class="dm-kicker">Live Encounter</p>
+            <h2>Combat Section</h2>
+          </div>
+          <div class="dm-actions">
+            <button type="button" class="dm-small" id="addPartyBtn">Add Party</button>
+            <button type="button" class="dm-small" id="addCustomBtn">Add Custom</button>
+            <button type="button" class="dm-small" id="restoreCombatBtn">Restore</button>
+            <button type="button" class="dm-danger" id="clearCombatBtn">Clear Combat</button>
+          </div>
+        </div>
+        <div class="dm-combat-layout">
+          <div class="dm-initiative-panel">
+            <div class="dm-round-row">
+              <label>
+                <span class="lbl">Round</span>
+                <input id="roundInput" class="dm-input dm-number" type="number" min="1" step="1" value="1">
+              </label>
+              <button type="button" class="dm-small" id="roundMinusBtn">-</button>
+              <button type="button" class="dm-small" id="roundPlusBtn">+</button>
+              <span class="dm-status" id="combatStatus">Combat autosaves</span>
+            </div>
+            <div class="dm-combatants" id="combatantsList"></div>
+          </div>
+          <aside class="dm-encounter-panel">
+            <div class="dm-subhead">
+              <span>Encounter Notes</span>
+              <span class="dm-status" id="encounterStatus">Autosave</span>
+            </div>
+            <div class="dm-ruled dm-encounter-notes" id="encounterNotes" contenteditable="true" data-plain="true" aria-label="Encounter notes"></div>
+          </aside>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="cloud-config.js?v=20260613j"></script>
+  <script src="dm.js?v=20260613j"></script>
+</body>
+</html>

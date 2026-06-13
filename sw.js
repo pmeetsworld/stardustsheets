@@ -1,4 +1,4 @@
-const APP_BUILD = '20260613i';
+const APP_BUILD = '20260613j';
 const SHELL_CACHE = 'aegis-shell-' + APP_BUILD;
 
 self.addEventListener('install', (event) => {
@@ -29,8 +29,9 @@ function currentUrlFor(url) {
   const isRoot = path === scope || path === scope + '/';
   const isCampaign = isRoot || path.endsWith('/index.html') || path.endsWith('/campaign.html');
   const isSheet = path.endsWith('/sheet.html') || path.endsWith('/Character%20Sheet.html') || path.endsWith('/Character Sheet.html');
+  const isDm = path.endsWith('/dm.html');
 
-  if (!isCampaign && !isSheet) return null;
+  if (!isCampaign && !isSheet && !isDm) return null;
   if (isCampaign) next.pathname = scope + '/campaign.html';
   if (next.searchParams.get('app') !== APP_BUILD) next.searchParams.set('app', APP_BUILD);
   return next;
