@@ -3,8 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20260613b">
 <style>
 body{ padding:48px 16px; min-height:100vh; }
 .roster-shell{
@@ -39,12 +42,13 @@ body{ padding:48px 16px; min-height:100vh; }
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use each player's secret edit link to update that character.</p>
   </main>
-  <script src="cloud-config.js"></script>
+  <script src="cloud-config.js?v=20260613b"></script>
   <script>
+    const APP_VERSION = '20260613b';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `
-      <a class="roster-card" href="sheet.html?slug=${encodeURIComponent(c.slug)}">
+      <a class="roster-card" href="sheet.html?app=${APP_VERSION}&slug=${encodeURIComponent(c.slug)}">
         <div class="name">${c.name}</div>
         <div class="player">${c.player}</div>
       </a>
