@@ -1,15 +1,16 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613j';
+  var BUILD = window.AEGIS_BUILD || '20260613k';
   var PASSWORD = 'AEGIS DM 712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
   var SESSIONS_LOCAL_KEY = 'aegis-dm-sessions-local-v1';
   var SESSION_DRAFT_KEY = 'aegis-dm-session-draft-v1';
+  var PC_HP_VIS_KEY = 'aegis-dm-pc-hp-visible-v1';
   var UNLOCK_MS = 12 * 60 * 60 * 1000;
   var PARTY_POLL_MS = 7000;
-  var COMBAT_SAVE_MS = 700;
+  var COMBAT_SAVE_MS = 10000;
 
   var config = window.AEGIS_CLOUD || {};
   var characters = [];
@@ -24,6 +25,7 @@
   };
   var sessions = [];
   var currentSession = null;
+  var pcHpVisible = localStorage.getItem(PC_HP_VIS_KEY) !== '0';
   var combatSaveTimer = null;
   var partyPollTimer = null;
   var combatCloudReady = true;
@@ -36,7 +38,7 @@
   function cacheEls(){
     [
       'dmLock','dmApp','dmUnlockForm','dmPassword','dmLockError','dmCloudStatus',
-      'partyGrid','refreshPartyBtn','newSessionBtn','saveSessionBtn','sessionDate',
+      'partyGrid','refreshPartyBtn','togglePcHpBtn','newSessionBtn','saveSessionBtn','sessionDate',
       'sessionTitle','sessionStatus','sessionNotesA','sessionNotesB','sessionList',
       'reloadSessionsBtn','addPartyBtn','addCustomBtn','restoreCombatBtn',
       'clearCombatBtn','roundInput','roundMinusBtn','roundPlusBtn','combatStatus',
@@ -138,6 +140,23 @@
       tempHp ? '<span class="dm-temp">+' + htmlToText(tempHp).replace(/^\+/, '') + '</span>' : '',
       '</div>'
     ].join('');
+  }
+
+  function hiddenPcHp(){
+    return '<div class="dm-hp-hidden" aria-label="Player HP hidden"><span>HP hidden</span></div>';
+  }
+
+  function pcHpBar(current, max, tempHp){
+    return pcHpVisible ? hpBar(current, max, tempHp) : hiddenPcHp();
+  }
+
+  function syncPcHpToggle(){
+    document.body.classList.toggle('pc-hp-hidden', !pcHpVisible);
+    if (!els.togglePcHpBtn) return;
+    els.togglePcHpBtn.setAttribute('aria-pressed', pcHpVisible ? 'false' : 'true');
+    els.togglePcHpBtn.title = pcHpVisible ? 'Hide player HP' : 'Show player HP';
+    var label = els.togglePcHpBtn.querySelector('span');
+    if (label) label.textContent = pcHpVisible ? 'PC HP' : 'PC HP hidden';
   }
 
   function hasCloudConfig(){
@@ -247,8 +266,8 @@
       return [
         '<a class="dm-party-card" href="' + s.sheetUrl + '" target="_blank" rel="noopener">',
         '<div class="dm-card-top"><div><span class="dm-card-name">' + escapeHtml(s.name) + '</span><span class="dm-card-player">' + escapeHtml(s.player) + '</span></div><span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span></div>',
-        hpBar(s.currentHp, s.maxHp, s.tempHp),
-        '<div class="dm-stat-row"><span>PP <b>' + escapeHtml(s.passive) + '</b></span><span>SPD <b>' + escapeHtml(s.speed) + '</b></span></div>',
+        pcHpBar(s.currentHp, s.maxHp, s.tempHp),
+        '<div class="dm-stat-row"><span>Passive Perception <b>' + escapeHtml(s.passive) + '</b></span><span>SPD <b>' + escapeHtml(s.speed) + '</b></span></div>',
         '</a>'
       ].join('');
     }).join('');
@@ -366,7 +385,7 @@
 
   function queueCombatSave(){
     writeLocalCombat();
-    setCombatStatus('Saving...', 'saving');
+    setCombatStatus('Autosave pending...', 'saving');
     clearTimeout(combatSaveTimer);
     combatSaveTimer = setTimeout(function(){
       combatSaveTimer = null;
@@ -481,7 +500,7 @@
       '<input class="dm-init" type="number" step="1" value="' + escapeHtml(row.initiative || '') + '" data-combat-field="initiative" data-id="' + escapeHtml(row.id) + '" aria-label="Initiative">',
       '<div class="dm-combat-identity"><a href="' + s.sheetUrl + '" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a><span>PC - live sheet</span></div>',
       '<span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span>',
-      '<div class="dm-combat-hp">' + hpBar(s.currentHp, s.maxHp, s.tempHp) + '</div>',
+      '<div class="dm-combat-hp">' + pcHpBar(s.currentHp, s.maxHp, s.tempHp) + '</div>',
       '</div>',
       '<div class="dm-combat-actions">',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
@@ -534,7 +553,6 @@
     if (['currentHp','maxHp'].indexOf(fieldName) >= 0) value = asNumber(value, 0);
     row[fieldName] = value;
     if (fieldName === 'initiative') row.initiative = value;
-    renderCombatants();
     queueCombatSave();
   }
 
@@ -789,7 +807,7 @@
     var backup = combatState.backup_state;
     combatState.round = backup.round || 1;
     combatState.combatants = Array.isArray(backup.combatants) ? backup.combatants : [];
-    combatState.encounter_notes = backup.encounter_notes || combatState.encounter_notes || '';
+    combatState.encounter_notes = typeof backup.encounter_notes === 'string' ? backup.encounter_notes : (combatState.encounter_notes || '');
     combatState.backup_state = current;
     renderCombatState();
     queueCombatSave();
@@ -816,6 +834,13 @@
     });
 
     els.refreshPartyBtn.addEventListener('click', function(){ loadParty(false); });
+    els.togglePcHpBtn.addEventListener('click', function(){
+      pcHpVisible = !pcHpVisible;
+      try { localStorage.setItem(PC_HP_VIS_KEY, pcHpVisible ? '1' : '0'); } catch (err) {}
+      syncPcHpToggle();
+      renderParty();
+      renderCombatants();
+    });
     els.newSessionBtn.addEventListener('click', newSession);
     els.saveSessionBtn.addEventListener('click', saveSession);
     els.reloadSessionsBtn.addEventListener('click', loadSessions);
@@ -862,6 +887,13 @@
       updateCombatField(id, fieldName, target.matches('[contenteditable]') ? target.textContent : target.value);
     });
 
+    els.combatantsList.addEventListener('change', function(evt){
+      var target = evt.target;
+      if (target.getAttribute('data-id') && target.getAttribute('data-combat-field')) {
+        renderCombatants();
+      }
+    });
+
     els.combatantsList.addEventListener('click', function(evt){
       var btn = evt.target.closest('[data-action]');
       if (!btn) return;
@@ -891,6 +923,7 @@
   function init(){
     cacheEls();
     wireEvents();
+    syncPcHpToggle();
     if (isUnlocked()) {
       unlock();
     } else {

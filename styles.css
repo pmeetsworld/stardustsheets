@@ -828,6 +828,42 @@ body.dm-screen-body{
   border-color:var(--red);
   color:var(--red);
 }
+.dm-eye-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  font-family:'Space Mono',monospace;
+  font-size:10px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  cursor:pointer;
+  color:var(--label);
+  background:transparent;
+  border:1px solid var(--frame);
+  border-radius:5px;
+  padding:7px 10px;
+  transition:.15s;
+}
+.dm-eye-btn:hover{
+  border-color:var(--red);
+  color:var(--red);
+}
+.dm-eye-btn svg{
+  width:16px;
+  height:16px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.dm-eye-btn .eye-closed{ display:none; }
+.pc-hp-hidden .dm-eye-btn{
+  border-color:rgba(127,153,189,.6);
+  color:var(--ice-2);
+}
+.pc-hp-hidden .dm-eye-btn .eye-open{ display:none; }
+.pc-hp-hidden .dm-eye-btn .eye-closed{ display:block; }
 .dm-shell{
   width:min(1220px,100%);
   margin:0 auto;
@@ -949,9 +985,25 @@ body.dm-screen-body{
   padding:2px 5px;
   background:rgba(127,153,189,.16);
 }
+.dm-hp-hidden{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:30px;
+  width:100%;
+  border:1px dashed rgba(127,153,189,.45);
+  border-radius:6px;
+  background:linear-gradient(180deg,rgba(18,21,25,.92),rgba(12,14,17,.92));
+  color:var(--label-dim);
+  font:700 10px 'Space Mono',monospace;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
 .dm-stat-row{
   display:flex;
   justify-content:space-between;
+  flex-wrap:wrap;
+  gap:4px 10px;
   color:var(--label-dim);
   font:10px 'Space Mono',monospace;
   letter-spacing:.08em;
@@ -1002,6 +1054,12 @@ body.dm-screen-body{
 .dm-encounter-panel{
   padding:10px;
   min-width:0;
+}
+.dm-encounter-panel{
+  display:flex;
+  flex-direction:column;
+  align-self:stretch;
+  height:100%;
 }
 .dm-subhead{
   justify-content:space-between;
@@ -1054,6 +1112,7 @@ body.dm-screen-body{
 }
 .dm-combat-card{
   padding:9px;
+  overflow:hidden;
   transition:opacity .15s, border-color .15s;
 }
 .dm-combat-card.defeated{
@@ -1067,7 +1126,7 @@ body.dm-screen-body{
   align-items:center;
 }
 .dm-custom .dm-combat-main{
-  grid-template-columns:58px minmax(150px,1fr) 58px 62px 62px 66px minmax(180px,1fr) minmax(190px,auto);
+  grid-template-columns:58px minmax(140px,1fr) repeat(4,minmax(52px,64px));
 }
 .dm-init{
   text-align:center;
@@ -1103,18 +1162,25 @@ body.dm-screen-body{
 .dm-mini-field input{ min-height:30px; padding:5px 7px; }
 .dm-name-input{ min-height:32px; }
 .dm-combat-hp{ min-width:0; }
+.dm-custom .dm-combat-hp,
+.dm-custom .dm-damage-tools{
+  grid-column:1 / -1;
+}
 .dm-combat-actions{
   display:flex;
   flex-wrap:wrap;
   gap:6px;
   justify-content:flex-end;
   margin-top:8px;
+  max-width:100%;
 }
 .dm-damage-tools{
   display:grid;
   grid-template-columns:54px auto auto;
   gap:4px;
   align-items:center;
+  justify-self:start;
+  max-width:360px;
 }
 .dm-damage-tools input{ min-height:30px; padding:5px 6px; }
 .dm-damage-tools button{ padding:6px 7px; font-size:8px; }
@@ -1126,7 +1192,10 @@ body.dm-screen-body{
   letter-spacing:.12em;
   text-transform:uppercase;
 }
-.dm-encounter-notes{ min-height:320px; }
+.dm-encounter-notes{
+  flex:1 1 0;
+  min-height:320px;
+}
 .dm-empty{
   color:var(--label-dim);
   font-size:12px;

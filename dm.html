@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260613j';
+  var build = '20260613k';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -21,15 +21,15 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613j">
+<link rel="stylesheet" href="styles.css?v=20260613k">
 </head>
 <body class="dm-screen-body">
   <div class="toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260613j" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260613k" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260613j">Roster</a>
-    <a class="nav-btn" href="sheet.html?app=20260613j">Blank Sheet</a>
+    <a class="nav-btn" href="campaign.html?app=20260613k">Roster</a>
+    <a class="nav-btn" href="sheet.html?app=20260613k">Blank Sheet</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -61,6 +61,11 @@
             <p class="dm-kicker">Live Character Feed</p>
             <h2>Live Party</h2>
           </div>
+          <button type="button" class="dm-eye-btn" id="togglePcHpBtn" aria-pressed="false" title="Hide player HP">
+            <svg class="eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.6"></circle></svg>
+            <svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 10.6a2.6 2.6 0 0 0 2.8 2.8"></path><path d="M7.2 7.5C4.1 9.1 2.5 12 2.5 12s3.5 6 9.5 6c1.7 0 3.2-.5 4.4-1.1"></path><path d="M13.7 6.2C18.7 7 21.5 12 21.5 12s-.8 1.4-2.4 2.8"></path></svg>
+            <span>PC HP</span>
+          </button>
           <button type="button" class="dm-small" id="refreshPartyBtn">Refresh</button>
         </div>
         <div class="dm-party-grid" id="partyGrid"></div>
@@ -141,7 +146,7 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260613j"></script>
-  <script src="dm.js?v=20260613j"></script>
+  <script src="cloud-config.js?v=20260613k"></script>
+  <script src="dm.js?v=20260613k"></script>
 </body>
 </html>
