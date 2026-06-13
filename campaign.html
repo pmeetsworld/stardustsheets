@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
-<link rel="stylesheet" href="styles.css?v=20260613b">
+<link rel="stylesheet" href="styles.css?v=20260613c">
 <style>
 body{ padding:48px 16px; min-height:100vh; }
 .roster-shell{
@@ -42,9 +42,9 @@ body{ padding:48px 16px; min-height:100vh; }
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use each player's secret edit link to update that character.</p>
   </main>
-  <script src="cloud-config.js?v=20260613b"></script>
+  <script src="cloud-config.js?v=20260613c"></script>
   <script>
-    const APP_VERSION = '20260613b';
+    const APP_VERSION = '20260613c';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `

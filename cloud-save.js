@@ -13,6 +13,7 @@
   var saveInFlight = false;
   var pollTimer = null;
   var POLL_MS = 10000;
+  var CACHE_PREFIX = 'aegis-cloud-character-v1:';
 
   function apiUrl(path){
     return config.supabaseUrl.replace(/\/$/, '') + '/rest/v1/' + path;
@@ -22,7 +23,8 @@
     var h = {
       apikey: config.supabaseKey,
       Authorization: 'Bearer ' + config.supabaseKey,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
     };
     Object.keys(extra || {}).forEach(function(k){ h[k] = extra[k]; });
     return h;
@@ -46,6 +48,50 @@
     return encodeURIComponent(value);
   }
 
+  function cacheKey(){
+    return CACHE_PREFIX + slug;
+  }
+
+  function readCachedCharacter(){
+    if (!slug) return null;
+    try {
+      var cached = JSON.parse(localStorage.getItem(cacheKey()) || 'null');
+      return cached && cached.sheet_data ? cached : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeCachedCharacter(character){
+    if (!slug || !character) return;
+    try {
+      localStorage.setItem(cacheKey(), JSON.stringify({
+        slug: character.slug || slug,
+        name: character.name || slug,
+        player_name: character.player_name || '',
+        sheet_data: character.sheet_data || {},
+        updated_at: character.updated_at || ''
+      }));
+    } catch (err) {}
+  }
+
+  function waitForSheetApi(){
+    if (window.AegisSheet) return Promise.resolve(true);
+    return new Promise(function(resolve){
+      var tries = 0;
+      var timer = setInterval(function(){
+        tries += 1;
+        if (window.AegisSheet) {
+          clearInterval(timer);
+          resolve(true);
+        } else if (tries >= 40) {
+          clearInterval(timer);
+          resolve(false);
+        }
+      }, 50);
+    });
+  }
+
   async function fetchCharacter(silent){
     if (!slug) {
       setStatus('Local mode - no character selected', 'local');
@@ -64,12 +110,13 @@
     return rows[0];
   }
 
-  function applyRemoteCharacter(character){
+  function applyRemoteCharacter(character, options){
     if (!character || !window.AegisSheet) return;
     currentCharacter = character;
     setTitle(character);
     window.AegisSheet.applyState(character.sheet_data || {}, { skipSave: true });
     window.AegisSheet.setReadOnly(!isEdit);
+    if (!options || !options.cached) writeCachedCharacter(character);
   }
 
   async function saveCharacterNow(){
@@ -99,7 +146,11 @@
         setStatus('Save denied - bad edit link', 'error');
         throw new Error('Save denied: edit key did not match this character.');
       }
-      if (currentCharacter) currentCharacter.updated_at = rows[0].updated_at;
+      if (currentCharacter) {
+        currentCharacter.sheet_data = state;
+        currentCharacter.updated_at = rows[0].updated_at;
+        writeCachedCharacter(currentCharacter);
+      }
       dirty = false;
       setStatus('Saved ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), 'saved');
     } finally {
@@ -135,6 +186,15 @@
   function startPolling(){
     if (!slug || pollTimer) return;
     pollTimer = setInterval(refreshFromCloud, POLL_MS);
+  }
+
+  function wireResumeRefresh(){
+    window.addEventListener('pageshow', function(evt){
+      if (evt.persisted) refreshFromCloud();
+    });
+    document.addEventListener('visibilitychange', function(){
+      if (!document.hidden) refreshFromCloud();
+    });
   }
 
   function initExportImport(){
@@ -177,25 +237,39 @@
 
   async function boot(){
     initExportImport();
-    if (!window.AegisSheet) return setStatus('Sheet API unavailable', 'error');
+    var ready = await waitForSheetApi();
+    if (!ready) return setStatus('Sheet API unavailable', 'error');
     if (slug && !isEdit) window.AegisSheet.setReadOnly(true);
+    var cachedApplied = false;
+
+    var cached = readCachedCharacter();
+    if (cached) {
+      cachedApplied = true;
+      applyRemoteCharacter(cached, { cached: true });
+      setStatus('Refreshing cloud...', 'loading');
+    }
 
     try {
-      currentCharacter = await fetchCharacter();
+      currentCharacter = await fetchCharacter(cachedApplied);
       if (currentCharacter) {
         applyRemoteCharacter(currentCharacter);
         setStatus(isEdit ? 'Edit mode - saved to cloud' : 'View only', isEdit ? 'edit' : 'view');
       }
     } catch (err) {
       console.error(err);
-      setStatus(err.message, 'error');
-      window.AegisSheet.setReadOnly(true);
+      if (cachedApplied) {
+        setStatus('Showing cached copy - cloud refresh failed', 'local');
+      } else {
+        setStatus(err.message, 'error');
+        window.AegisSheet.setReadOnly(true);
+      }
     } finally {
       loading = false;
     }
 
     window.AegisSheet.onChange(queueSave);
     startPolling();
+    wireResumeRefresh();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
