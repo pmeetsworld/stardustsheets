@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613l';
+  var BUILD = window.AEGIS_BUILD || '20260613m';
   var PASSWORD = 'AEGIS DM 712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -106,6 +106,27 @@
     return isNaN(num) ? (fallback || 0) : num;
   }
 
+  function signedNumber(value){
+    var text = htmlToText(value);
+    var num = parseInt(text.replace(/[^\d-]/g, ''), 10);
+    return isNaN(num) ? null : num;
+  }
+
+  function passiveFromSenses(character, name){
+    var senses = field(character, 'p1.senses', '');
+    var match = senses.match(new RegExp('Passive\\s+' + name + '\\s*(\\d+)', 'i'));
+    return match ? match[1] : '';
+  }
+
+  function passiveScore(character, skillKey, explicitKey, sensesName){
+    var explicit = explicitKey ? field(character, explicitKey, '') : '';
+    if (explicit) return explicit;
+    var fromSenses = sensesName ? passiveFromSenses(character, sensesName) : '';
+    if (fromSenses) return fromSenses;
+    var mod = signedNumber(field(character, skillKey, ''));
+    return mod == null ? '-' : String(10 + mod);
+  }
+
   function characterStats(character){
     var maxHp = asNumber(field(character, 'p1.maxhp'), 0);
     var curHp = asNumber(field(character, 'p1.curhp'), maxHp);
@@ -117,7 +138,9 @@
       currentHp: curHp,
       maxHp: maxHp,
       tempHp: field(character, 'p1.temphp', '0'),
-      passive: field(character, 'p1.passive', '-'),
+      passive: passiveScore(character, 'p1.sk.perc.m', 'p1.passive', 'Perception'),
+      passiveInsight: passiveScore(character, 'p1.sk.insi.m', '', 'Insight'),
+      passiveInvestigation: passiveScore(character, 'p1.sk.inve.m', '', 'Investigation'),
       speed: field(character, 'p1.speed', '-'),
       sheetUrl: 'sheet.html?app=' + BUILD + '&slug=' + encode(character.slug)
     };
@@ -162,6 +185,36 @@
 
   function pcHpBar(current, max, tempHp){
     return pcHpVisible ? hpBar(current, max, tempHp) : hiddenPcHp(current, max);
+  }
+
+  function deathCounts(row){
+    return {
+      successes: Math.max(0, Math.min(3, asNumber(row && row.deathSuccesses, 0))),
+      failures: Math.max(0, Math.min(3, asNumber(row && row.deathFailures, 0)))
+    };
+  }
+
+  function deathPips(row, kind, count){
+    var label = kind === 'success' ? 'Death save success' : 'Death save failure';
+    var action = kind === 'success' ? 'death-success' : 'death-failure';
+    var html = '';
+    for (var i = 1; i <= 3; i += 1) {
+      html += '<button type="button" class="dm-death-dot ' + kind + (count >= i ? ' on' : '') + '" data-action="' + action + '" data-id="' + escapeHtml(row.id) + '" data-value="' + i + '" aria-label="' + label + ' ' + i + '"></button>';
+    }
+    return html;
+  }
+
+  function deathSaveTracker(row, stats){
+    var counts = deathCounts(row);
+    var isAtZero = stats.maxHp > 0 && stats.currentHp <= 0;
+    if (!isAtZero && !counts.successes && !counts.failures) return '';
+    return [
+      '<div class="dm-death-tracker">',
+      '<span class="dm-death-title">Death Saves</span>',
+      '<span class="dm-death-group"><em>Succ</em>' + deathPips(row, 'success', counts.successes) + '</span>',
+      '<span class="dm-death-group"><em>Fail</em>' + deathPips(row, 'failure', counts.failures) + '</span>',
+      '</div>'
+    ].join('');
   }
 
   function syncPcHpToggle(){
@@ -281,7 +334,8 @@
         '<a class="dm-party-card" href="' + s.sheetUrl + '" target="_blank" rel="noopener">',
         '<div class="dm-card-top"><div><span class="dm-card-name">' + escapeHtml(s.name) + '</span><span class="dm-card-player">' + escapeHtml(s.player) + '</span></div><span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span></div>',
         pcHpBar(s.currentHp, s.maxHp, s.tempHp),
-        '<div class="dm-stat-row"><span>Passive Perception <b>' + escapeHtml(s.passive) + '</b></span><span>SPD <b>' + escapeHtml(s.speed) + '</b></span></div>',
+        '<div class="dm-passive-block"><span class="dm-passive-title">Passive Scores</span><div class="dm-passive-grid" aria-label="Passive scores"><span><em>Perception</em><b>' + escapeHtml(s.passive) + '</b></span><span><em>Insight</em><b>' + escapeHtml(s.passiveInsight) + '</b></span><span><em>Investigation</em><b>' + escapeHtml(s.passiveInvestigation) + '</b></span></div></div>',
+        '<div class="dm-stat-row"><span>Speed <b>' + escapeHtml(s.speed) + '</b></span></div>',
         '</a>'
       ].join('');
     }).join('');
@@ -522,6 +576,7 @@
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
       '<button type="button" class="dm-icon-btn" data-action="delete" data-id="' + escapeHtml(row.id) + '" title="Remove">X</button>',
       '</div>',
+      deathSaveTracker(row, s),
       expanded ? '<div class="dm-combat-notes"><div class="dm-ruled compact" contenteditable="true" data-plain="true" data-combat-field="notes" data-id="' + escapeHtml(row.id) + '">' + escapeHtml(row.notes || '') + '</div></div>' : '',
       '</article>'
     ].join('');
@@ -583,10 +638,10 @@
     queueCombatSave();
   }
 
-  function handleCombatAction(action, id){
+  function handleCombatAction(action, id, source){
     var row = findCombatant(id);
     if (!row && action !== 'add') return;
-    if (['delete','duplicate','damage','heal'].indexOf(action) >= 0) snapshotCombat();
+    if (['delete','duplicate','damage','heal','death-success','death-failure'].indexOf(action) >= 0) snapshotCombat();
 
     if (action === 'toggle-notes') {
       row.expanded = !row.expanded;
@@ -604,6 +659,11 @@
       if (!amount || row.kind !== 'custom') return;
       var current = asNumber(row.currentHp, 0);
       row.currentHp = action === 'damage' ? Math.max(0, current - amount) : current + amount;
+    } else if ((action === 'death-success' || action === 'death-failure') && row.kind === 'pc') {
+      var value = Math.max(0, Math.min(3, asNumber(source && source.getAttribute('data-value'), 0)));
+      var key = action === 'death-success' ? 'deathSuccesses' : 'deathFailures';
+      var currentCount = asNumber(row[key], 0);
+      row[key] = currentCount >= value ? Math.max(0, value - 1) : value;
     } else if (action === 'move-up') {
       moveCombatant(id, -1);
       return;
@@ -911,7 +971,7 @@
     els.combatantsList.addEventListener('click', function(evt){
       var btn = evt.target.closest('[data-action]');
       if (!btn) return;
-      handleCombatAction(btn.getAttribute('data-action'), btn.getAttribute('data-id'));
+      handleCombatAction(btn.getAttribute('data-action'), btn.getAttribute('data-id'), btn);
     });
 
     document.addEventListener('paste', function(evt){
