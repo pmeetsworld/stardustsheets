@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613m';
+  var BUILD = window.AEGIS_BUILD || '20260613n';
   var PASSWORD = 'AEGIS DM 712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -11,12 +11,14 @@
   var UNLOCK_MS = 12 * 60 * 60 * 1000;
   var PARTY_POLL_MS = 7000;
   var COMBAT_SAVE_MS = 10000;
+  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
   var config = window.AEGIS_CLOUD || {};
   var characters = [];
   var characterMap = {};
   var combatState = {
     id: 'main',
+    combat_active: false,
     round: 1,
     combatants: [],
     encounter_notes: '',
@@ -30,6 +32,8 @@
   var partyPollTimer = null;
   var combatCloudReady = true;
   var sessionsCloudReady = true;
+  var realtimeClient = null;
+  var realtimeChannel = null;
 
   var els = {};
 
@@ -42,7 +46,7 @@
       'sessionTitle','sessionStatus','sessionNotesA','sessionNotesB','sessionList',
       'reloadSessionsBtn','addPartyBtn','addCustomBtn','restoreCombatBtn',
       'clearCombatBtn','roundInput','roundMinusBtn','roundPlusBtn','combatStatus',
-      'combatantsList','encounterNotes','encounterStatus'
+      'combatLiveBtn','combatantsList','encounterNotes','encounterStatus'
     ].forEach(function(id){ els[id] = $(id); });
   }
 
@@ -164,6 +168,44 @@
     return { label: 'Healthy', className: 'is-healthy' };
   }
 
+  var CONDITION_LABELS = {
+    blinded: 'Blinded',
+    charmed: 'Charmed',
+    deafened: 'Deafened',
+    frightened: 'Frightened',
+    grappled: 'Grappled',
+    incapacitated: 'Incapacitated',
+    invisible: 'Invisible',
+    paralyzed: 'Paralyzed',
+    petrified: 'Petrified',
+    poisoned: 'Poisoned',
+    prone: 'Prone',
+    restrained: 'Restrained',
+    stunned: 'Stunned',
+    unconscious: 'Unconscious'
+  };
+
+  function activeConditions(character){
+    var toggles = character && character.sheet_data && character.sheet_data.toggles ? character.sheet_data.toggles : {};
+    return Object.keys(CONDITION_LABELS).filter(function(key){
+      return toggles['p1.cond.' + key] === 1 || toggles['p1.cond.' + key] === true;
+    }).map(function(key){ return CONDITION_LABELS[key]; });
+  }
+
+  function splitConditions(value){
+    return String(value || '')
+      .split(/[,;|]/)
+      .map(function(part){ return part.trim(); })
+      .filter(Boolean);
+  }
+
+  function conditionStrip(items){
+    if (!items || !items.length) return '<div class="dm-condition-strip muted">No conditions</div>';
+    return '<div class="dm-condition-strip">' + items.map(function(item){
+      return '<span>' + escapeHtml(item) + '</span>';
+    }).join('') + '</div>';
+  }
+
   function hpBar(current, max, tempHp){
     var pct = hpPercent(current, max);
     var gradientWidth = pct > 0 ? (10000 / pct) : 100;
@@ -187,36 +229,6 @@
     return pcHpVisible ? hpBar(current, max, tempHp) : hiddenPcHp(current, max);
   }
 
-  function deathCounts(row){
-    return {
-      successes: Math.max(0, Math.min(3, asNumber(row && row.deathSuccesses, 0))),
-      failures: Math.max(0, Math.min(3, asNumber(row && row.deathFailures, 0)))
-    };
-  }
-
-  function deathPips(row, kind, count){
-    var label = kind === 'success' ? 'Death save success' : 'Death save failure';
-    var action = kind === 'success' ? 'death-success' : 'death-failure';
-    var html = '';
-    for (var i = 1; i <= 3; i += 1) {
-      html += '<button type="button" class="dm-death-dot ' + kind + (count >= i ? ' on' : '') + '" data-action="' + action + '" data-id="' + escapeHtml(row.id) + '" data-value="' + i + '" aria-label="' + label + ' ' + i + '"></button>';
-    }
-    return html;
-  }
-
-  function deathSaveTracker(row, stats){
-    var counts = deathCounts(row);
-    var isAtZero = stats.maxHp > 0 && stats.currentHp <= 0;
-    if (!isAtZero && !counts.successes && !counts.failures) return '';
-    return [
-      '<div class="dm-death-tracker">',
-      '<span class="dm-death-title">Death Saves</span>',
-      '<span class="dm-death-group"><em>Succ</em>' + deathPips(row, 'success', counts.successes) + '</span>',
-      '<span class="dm-death-group"><em>Fail</em>' + deathPips(row, 'failure', counts.failures) + '</span>',
-      '</div>'
-    ].join('');
-  }
-
   function syncPcHpToggle(){
     document.body.classList.toggle('pc-hp-hidden', !pcHpVisible);
     if (!els.togglePcHpBtn) return;
@@ -224,6 +236,14 @@
     els.togglePcHpBtn.title = pcHpVisible ? 'Show player health status' : 'Show exact player HP';
     var label = els.togglePcHpBtn.querySelector('span');
     if (label) label.textContent = pcHpVisible ? 'PC HP' : 'PC Status';
+  }
+
+  function syncCombatLiveToggle(){
+    if (!els.combatLiveBtn) return;
+    var live = !!combatState.combat_active;
+    els.combatLiveBtn.classList.toggle('on', live);
+    els.combatLiveBtn.setAttribute('aria-pressed', live ? 'true' : 'false');
+    els.combatLiveBtn.title = live ? 'Encounter Viewer is live' : 'Encounter Viewer is waiting';
   }
 
   function hasCloudConfig(){
@@ -398,6 +418,7 @@
   function normalizeCombatState(row){
     return {
       id: row.id || 'main',
+      combat_active: !!row.combat_active,
       round: Math.max(1, parseInt(row.round, 10) || 1),
       combatants: Array.isArray(row.combatants) ? row.combatants : [],
       encounter_notes: row.encounter_notes || '',
@@ -409,6 +430,7 @@
   function combatPayload(){
     return {
       id: 'main',
+      combat_active: !!combatState.combat_active,
       round: Math.max(1, parseInt(combatState.round, 10) || 1),
       combatants: combatState.combatants || [],
       encounter_notes: combatState.encounter_notes || '',
@@ -463,6 +485,7 @@
 
   function renderCombatState(){
     if (els.roundInput) els.roundInput.value = combatState.round || 1;
+    syncCombatLiveToggle();
     if (els.encounterNotes && els.encounterNotes.textContent !== (combatState.encounter_notes || '')) {
       els.encounterNotes.textContent = combatState.encounter_notes || '';
     }
@@ -481,6 +504,7 @@
 
   function snapshotCombat(){
     combatState.backup_state = {
+      combat_active: !!combatState.combat_active,
       round: combatState.round,
       combatants: JSON.parse(JSON.stringify(combatState.combatants || [])),
       encounter_notes: combatState.encounter_notes || '',
@@ -521,6 +545,8 @@
       currentHp: 1,
       maxHp: 1,
       tempHp: '',
+      conditions: '',
+      defeated: false,
       notes: '',
       expanded: false,
       order: nextOrder()
@@ -562,6 +588,7 @@
     var character = characterMap[row.slug] || { slug: row.slug, name: row.slug, sheet_data: { fields: {} } };
     var s = characterStats(character);
     var expanded = !!row.expanded;
+    var conditions = activeConditions(character);
     return [
       '<article class="dm-combat-card dm-pc" data-id="' + escapeHtml(row.id) + '">',
       '<div class="dm-combat-main">',
@@ -570,13 +597,13 @@
       '<span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span>',
       '<div class="dm-combat-hp">' + pcHpBar(s.currentHp, s.maxHp, s.tempHp) + '</div>',
       '</div>',
+      conditionStrip(conditions),
       '<div class="dm-combat-actions">',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-down" data-id="' + escapeHtml(row.id) + '" title="Move down">Down</button>',
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
       '<button type="button" class="dm-icon-btn" data-action="delete" data-id="' + escapeHtml(row.id) + '" title="Remove">X</button>',
       '</div>',
-      deathSaveTracker(row, s),
       expanded ? '<div class="dm-combat-notes"><div class="dm-ruled compact" contenteditable="true" data-plain="true" data-combat-field="notes" data-id="' + escapeHtml(row.id) + '">' + escapeHtml(row.notes || '') + '</div></div>' : '',
       '</article>'
     ].join('');
@@ -585,8 +612,9 @@
   function renderCustomCombatant(row){
     var current = asNumber(row.currentHp, 0);
     var max = Math.max(0, asNumber(row.maxHp, 0));
-    var defeated = max > 0 && current <= 0;
+    var defeated = !!row.defeated || (max > 0 && current <= 0);
     var expanded = !!row.expanded;
+    var conditions = splitConditions(row.conditions);
     return [
       '<article class="dm-combat-card dm-custom ' + (defeated ? 'defeated' : '') + '" data-id="' + escapeHtml(row.id) + '">',
       '<div class="dm-combat-main">',
@@ -598,11 +626,14 @@
       '<label class="dm-mini-field"><span>Temp</span><input type="text" value="' + escapeHtml(row.tempHp || '') + '" data-combat-field="tempHp" data-id="' + escapeHtml(row.id) + '"></label>',
       '<div class="dm-combat-hp">' + hpBar(current, max, row.tempHp) + '</div>',
       '<div class="dm-damage-tools"><input type="number" step="1" min="0" placeholder="0" data-damage-id="' + escapeHtml(row.id) + '"><button type="button" data-action="damage" data-id="' + escapeHtml(row.id) + '">Damage</button><button type="button" data-action="heal" data-id="' + escapeHtml(row.id) + '">Heal</button></div>',
+      '<label class="dm-wide-field"><span>Conditions</span><input type="text" value="' + escapeHtml(row.conditions || '') + '" data-combat-field="conditions" data-id="' + escapeHtml(row.id) + '" placeholder="Prone, poisoned..."></label>',
       '</div>',
+      conditionStrip(conditions),
       '<div class="dm-combat-actions">',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-down" data-id="' + escapeHtml(row.id) + '" title="Move down">Down</button>',
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
+      '<button type="button" class="dm-small ' + (defeated ? 'active' : '') + '" data-action="toggle-defeated" data-id="' + escapeHtml(row.id) + '">' + (defeated ? 'Restore' : 'Defeated') + '</button>',
       '<button type="button" class="dm-small" data-action="duplicate" data-id="' + escapeHtml(row.id) + '">Duplicate</button>',
       '<button type="button" class="dm-icon-btn" data-action="delete" data-id="' + escapeHtml(row.id) + '" title="Remove">X</button>',
       '</div>',
@@ -621,6 +652,7 @@
     if (!row) return;
     if (['currentHp','maxHp'].indexOf(fieldName) >= 0) value = asNumber(value, 0);
     row[fieldName] = value;
+    if (fieldName === 'currentHp' && row.kind === 'custom' && value > 0) row.defeated = false;
     if (fieldName === 'initiative') row.initiative = value;
     queueCombatSave();
   }
@@ -641,7 +673,7 @@
   function handleCombatAction(action, id, source){
     var row = findCombatant(id);
     if (!row && action !== 'add') return;
-    if (['delete','duplicate','damage','heal','death-success','death-failure'].indexOf(action) >= 0) snapshotCombat();
+    if (['delete','duplicate','damage','heal','toggle-defeated'].indexOf(action) >= 0) snapshotCombat();
 
     if (action === 'toggle-notes') {
       row.expanded = !row.expanded;
@@ -659,11 +691,9 @@
       if (!amount || row.kind !== 'custom') return;
       var current = asNumber(row.currentHp, 0);
       row.currentHp = action === 'damage' ? Math.max(0, current - amount) : current + amount;
-    } else if ((action === 'death-success' || action === 'death-failure') && row.kind === 'pc') {
-      var value = Math.max(0, Math.min(3, asNumber(source && source.getAttribute('data-value'), 0)));
-      var key = action === 'death-success' ? 'deathSuccesses' : 'deathFailures';
-      var currentCount = asNumber(row[key], 0);
-      row[key] = currentCount >= value ? Math.max(0, value - 1) : value;
+      if (row.currentHp > 0) row.defeated = false;
+    } else if (action === 'toggle-defeated' && row.kind === 'custom') {
+      row.defeated = !row.defeated;
     } else if (action === 'move-up') {
       moveCombatant(id, -1);
       return;
@@ -870,6 +900,7 @@
   function clearCombat(){
     if (!confirm('Are you sure you want to clear combatants? Encounter notes will stay.')) return;
     snapshotCombat();
+    combatState.combat_active = false;
     combatState.combatants = [];
     renderCombatants();
     queueCombatSave();
@@ -879,6 +910,7 @@
     if (!combatState.backup_state) return;
     var current = snapshotForRestore();
     var backup = combatState.backup_state;
+    combatState.combat_active = !!backup.combat_active;
     combatState.round = backup.round || 1;
     combatState.combatants = Array.isArray(backup.combatants) ? backup.combatants : [];
     combatState.encounter_notes = typeof backup.encounter_notes === 'string' ? backup.encounter_notes : (combatState.encounter_notes || '');
@@ -889,6 +921,7 @@
 
   function snapshotForRestore(){
     return {
+      combat_active: !!combatState.combat_active,
       round: combatState.round,
       combatants: JSON.parse(JSON.stringify(combatState.combatants || [])),
       encounter_notes: combatState.encounter_notes || '',
@@ -922,6 +955,11 @@
     els.addCustomBtn.addEventListener('click', function(){ addCustom(); });
     els.clearCombatBtn.addEventListener('click', clearCombat);
     els.restoreCombatBtn.addEventListener('click', restoreCombat);
+    els.combatLiveBtn.addEventListener('click', function(){
+      combatState.combat_active = !combatState.combat_active;
+      syncCombatLiveToggle();
+      queueCombatSave();
+    });
     els.roundMinusBtn.addEventListener('click', function(){
       combatState.round = Math.max(1, (parseInt(combatState.round, 10) || 1) - 1);
       renderCombatState();
@@ -983,12 +1021,62 @@
     });
   }
 
+  async function startRealtime(){
+    if (realtimeChannel || !hasCloudConfig()) return;
+    try {
+      var mod = await import(SUPABASE_JS_URL);
+      realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+      realtimeChannel = realtimeClient
+        .channel('aegis-dm-screen')
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'dm_state',
+          filter: 'id=eq.main'
+        }, function(payload){
+          if (combatSaveTimer) return;
+          combatState = normalizeCombatState(payload.new || {});
+          writeLocalCombat();
+          renderCombatState();
+          setCombatStatus('Live synced', 'saved');
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'characters'
+        }, function(payload){
+          var record = payload && payload.new;
+          if (!record || !record.slug) return;
+          characterMap[record.slug] = record;
+          characters = characters.map(function(character){
+            return character.slug === record.slug ? record : character;
+          });
+          renderParty();
+          renderCombatants();
+        })
+        .subscribe(function(status, err){
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Realtime unavailable; polling remains active.', err || status);
+          }
+        });
+    } catch (err) {
+      console.warn('Realtime unavailable; polling remains active.', err);
+    }
+  }
+
   async function initData(){
     await Promise.all([
       loadParty(false),
       loadCombatState(),
       loadSessions()
     ]);
+    startRealtime();
     if (!partyPollTimer) {
       partyPollTimer = setInterval(function(){ loadParty(true); }, PARTY_POLL_MS);
     }

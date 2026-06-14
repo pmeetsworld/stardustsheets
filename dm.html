@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260613m';
+  var build = '20260613n';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -21,15 +21,16 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613m">
+<link rel="stylesheet" href="styles.css?v=20260613n">
 </head>
 <body class="dm-screen-body">
   <div class="toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260613m" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260613n" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260613m">Roster</a>
-    <a class="nav-btn" href="sheet.html?app=20260613m">Blank Sheet</a>
+    <a class="nav-btn" href="campaign.html?app=20260613n">Roster</a>
+    <a class="nav-btn" href="encounter.html?app=20260613n">Encounter</a>
+    <a class="nav-btn" href="sheet.html?app=20260613n">Blank Sheet</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -130,6 +131,7 @@
               </label>
               <button type="button" class="dm-small" id="roundMinusBtn">-</button>
               <button type="button" class="dm-small" id="roundPlusBtn">+</button>
+              <button type="button" class="dm-live-toggle" id="combatLiveBtn" aria-pressed="false"><span></span>Combat Live</button>
               <span class="dm-status" id="combatStatus">Combat autosaves</span>
             </div>
             <div class="dm-combatants" id="combatantsList"></div>
@@ -146,7 +148,8 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260613m"></script>
-  <script src="dm.js?v=20260613m"></script>
+  <script src="cloud-config.js?v=20260613n"></script>
+  <script src="view-mode.js?v=20260613n"></script>
+  <script src="dm.js?v=20260613n"></script>
 </body>
 </html>

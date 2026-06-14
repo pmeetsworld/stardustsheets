@@ -10,6 +10,7 @@ create table if not exists public.dm_sessions (
 
 create table if not exists public.dm_state (
   id text primary key default 'main',
+  combat_active boolean not null default false,
   round integer not null default 1,
   combatants jsonb not null default '[]'::jsonb,
   encounter_notes text not null default '',
@@ -17,6 +18,9 @@ create table if not exists public.dm_state (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.dm_state
+add column if not exists combat_active boolean not null default false;
 
 alter table public.dm_sessions enable row level security;
 alter table public.dm_state enable row level security;

@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
 <script>
 (function(){
-  var build = '20260613m';
+  var build = '20260613n';
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
   }
@@ -20,7 +20,7 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613m">
+<link rel="stylesheet" href="styles.css?v=20260613n">
 <style>
 body{ padding:48px 16px; min-height:100vh; }
 .roster-shell{
@@ -63,17 +63,22 @@ body{ padding:48px 16px; min-height:100vh; }
       </div>
     </div>
     <div class="roster-actions">
-      <a class="roster-dm" href="dm.html?app=20260613m">
+      <a class="roster-dm" href="dm.html?app=20260613n">
         <span><b>DM Screen</b>Party stats / Session notes / Combat tracker</span>
         <em>Access</em>
+      </a>
+      <a class="roster-dm roster-public" href="encounter.html?app=20260613n">
+        <span><b>Encounter Viewer</b>Public initiative order / health status / conditions</span>
+        <em>Live</em>
       </a>
     </div>
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use each player's secret edit link to update that character.</p>
   </main>
-  <script src="cloud-config.js?v=20260613m"></script>
+  <script src="cloud-config.js?v=20260613n"></script>
+  <script src="view-mode.js?v=20260613n"></script>
   <script>
-    const APP_VERSION = '20260613m';
+    const APP_VERSION = '20260613n';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `
