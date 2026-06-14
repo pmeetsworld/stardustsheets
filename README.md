@@ -4,11 +4,11 @@ D&D 5.5e campaign tools for a small table: public character sheets, a soft-gated
 
 Live site:
 
-- Campaign roster: https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613n
-- Encounter Viewer: https://pmeetsworld.github.io/stardustsheets/encounter.html?app=20260613n
-- DM Screen: https://pmeetsworld.github.io/stardustsheets/dm.html?app=20260613n
+- Campaign roster: https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613o
+- Encounter Viewer: https://pmeetsworld.github.io/stardustsheets/encounter.html?app=20260613o
+- DM Screen: https://pmeetsworld.github.io/stardustsheets/dm.html?app=20260613o
 
-Current app build: `20260613n`
+Current app build: `20260613o`
 
 ## What This Is
 
@@ -59,7 +59,7 @@ This is a static GitHub Pages site backed by Supabase.
 Each character sheet uses:
 
 ```text
-sheet.html?app=20260613n&slug=<character-slug>
+sheet.html?app=20260613o&slug=<character-slug>
 ```
 
 Edit links add:
@@ -188,7 +188,7 @@ This repo is the GitHub Pages source.
 
 After edits:
 
-1. Bump the app build token everywhere, currently `20260613n`.
+1. Bump the app build token everywhere, currently `20260613o`.
 2. Keep `sheet.html` and `Character Sheet.html` in sync.
 3. Update `sw.js` `APP_BUILD`.
 4. Run syntax checks on changed JS:

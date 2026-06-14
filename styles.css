@@ -1854,7 +1854,12 @@ body.view-mobile-effective .watable .warow{
   grid-template-columns:minmax(94px,1fr) 36px minmax(90px,1fr) 54px;
 }
 body.view-mobile-effective .cond-strip{
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:repeat(7,minmax(0,1fr));
+}
+body.view-mobile-effective .cflag{
+  min-width:0;
+  padding-inline:4px;
 }
 body.view-mobile-effective .feat-legend{
   flex-wrap:wrap;

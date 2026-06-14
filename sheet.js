@@ -290,8 +290,8 @@
         '<div class="feat-top"><span class="sect-title">Features &amp; Traits \u2014 Continued</span>' +
           '<div class="feat-legend"><span class="lg-chip class">Class</span><span class="lg-chip sub">Subclass</span><span class="lg-chip species">Species</span><span class="lg-chip feat">Feat</span></div></div>' +
         '<div class="row grow" style="min-height:0;">' +
-          '<div class="panel cyan grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.1" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
-          '<div class="panel violet grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.2" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
+          '<div class="panel ref grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.1" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
+          '<div class="panel ref grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.2" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
         '</div>' +
         '<div class="feat-controls"><button class="feat-add">+ Features page</button><button class="feat-remove">Remove page</button></div>' +
         '<div class="page-foot" style="font-size: 11px"><span class="red">AEGIS SOLUTIONS</span><span class="sep">\u00b7</span><span class="ttl">Capability Record</span></div>' +

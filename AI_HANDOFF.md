@@ -15,13 +15,13 @@ bf28243 Add public encounter viewer
 Current build token:
 
 ```text
-20260613n
+20260613o
 ```
 
 Live GitHub Pages:
 
 ```text
-https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613n
+https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613o
 ```
 
 Workspace paths:
@@ -32,6 +32,16 @@ C:\Users\xyzas\Documents\Codex\2026-06-04\fetch-this-design-file-read-its\output
 ```
 
 The GitHub checkout is the deploy source. The output folder is a synced local design/reference copy.
+
+## Latest Visual Audit
+
+The `20260613o` pass checked Campaign, Sheet, DM Screen, and Encounter Viewer in both Desktop and forced Mobile view modes. The automated DOM audit reported no horizontal page overflow, no clipped controls/labels, no detected element overlaps, and no console warnings/errors on those routes after fixes.
+
+Changes made in that pass:
+
+- Campaign forced Mobile mode now uses a narrower one-column roster shell instead of the desktop-width shell.
+- Character Sheet mobile conditions now use a two-row grid so labels like `BLIND`, `CHARM`, and `RESTR` do not clip.
+- Dynamic continuation Features pages now use `panel ref` instead of legacy `cyan` / `violet` panel classes.
 
 ## User Intent
 
@@ -280,7 +290,7 @@ Payton is the DM and does not need a sheet.
 Before pushing:
 
 1. Inspect git status and avoid overwriting unrelated user changes.
-2. Bump `20260613n` style build token in HTML/JS/CSS references and `sw.js`.
+2. Bump `20260613o` style build token in HTML/JS/CSS references and `sw.js`.
 3. Keep `sheet.html` and `Character Sheet.html` synchronized.
 4. Run JS syntax checks with bundled Node:
 
@@ -302,14 +312,14 @@ git diff --check
 
 ## Recent QA Evidence
 
-For build `20260613n`:
+For build `20260613o`:
 
 - Local campaign page loaded with 4 character cards, DM Screen link, Encounter Viewer link, and view toggle.
 - DM Screen unlocked from cached session, rendered 4 party cards, condition strips, and Combat Live toggle.
 - DM view toggle switched Mobile and Desktop classes/layout.
 - Encounter Viewer loaded live, showed waiting screen with Combat Live off, no console errors.
 - Sheet loaded Jangles from Supabase, showed read-only cloud status, and view toggle worked.
-- Live GitHub Pages caught up and served `20260613n`.
+- Live GitHub Pages caught up and served `20260613o`.
 
 Browser screenshot capture timed out in the Codex in-app browser, so verification relied on DOM snapshots, console logs, and computed styles.
 
