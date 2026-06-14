@@ -15,13 +15,13 @@ bf28243 Add public encounter viewer
 Current build token:
 
 ```text
-20260613o
+20260614b
 ```
 
 Live GitHub Pages:
 
 ```text
-https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613o
+https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260614b
 ```
 
 Workspace paths:
@@ -171,7 +171,7 @@ Dynamic spell rows:
 Owns:
 
 - loading/saving one character
-- edit-key gated saves through `x-edit-key`
+- password-gated sheet editing: normal roster links are read-only, the `Edit` button asks for `712`, then `cloud-save.js` uses the character's configured `editKey` as `x-edit-key`
 - local cached character fallback
 - import/export JSON
 - Supabase realtime for the open sheet
@@ -192,7 +192,7 @@ sheet_data.images
 
 Owns the private/soft-gated DM experience:
 
-- unlock password `AEGIS DM 712`
+- unlock password `712`
 - Live Party cards
 - PC HP/status eye toggle
 - passive scores
@@ -279,7 +279,7 @@ From `cloud-config.js`:
 | Slug | Character | Player |
 |---|---|---|
 | `jangles` | Jangles | Bridgette |
-| `bubranatak` | Bubranatak | Cary |
+| `bubranatak` | Bubaranatak | Cary |
 | `e-jinx` | E-Jinx | Wyatt |
 | `patch` | Patch | Jared |
 
@@ -290,7 +290,7 @@ Payton is the DM and does not need a sheet.
 Before pushing:
 
 1. Inspect git status and avoid overwriting unrelated user changes.
-2. Bump `20260613o` style build token in HTML/JS/CSS references and `sw.js`.
+2. Bump `20260614b` style build token in HTML/JS/CSS references and `sw.js`.
 3. Keep `sheet.html` and `Character Sheet.html` synchronized.
 4. Run JS syntax checks with bundled Node:
 
@@ -321,6 +321,8 @@ For build `20260613o`:
 - Sheet loaded Jangles from Supabase, showed read-only cloud status, and view toggle worked.
 - Live GitHub Pages caught up and served `20260613o`.
 
+Build `20260614b` is a spelling/cache update for Bubaranatak, with JS syntax and diff checks run locally.
+
 Browser screenshot capture timed out in the Codex in-app browser, so verification relied on DOM snapshots, console logs, and computed styles.
 
 ## Known Issues / Do Not Surprise The User With
@@ -339,4 +341,4 @@ Browser screenshot capture timed out in the Codex in-app browser, so verificatio
 3. Add encounter presets or quick monster duplication helpers.
 4. Add public combat-active banner on campaign home.
 5. Build AcroForm PDF export from rendered fields.
-6. Add a tiny admin doc for creating player edit links.
+6. Add a small admin page for managing character rows and configured edit keys.

@@ -1,8 +1,8 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613o';
-  var PASSWORD = 'AEGIS DM 712';
+  var BUILD = window.AEGIS_BUILD || '20260614b';
+  var PASSWORD = '712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
   var SESSIONS_LOCAL_KEY = 'aegis-dm-sessions-local-v1';

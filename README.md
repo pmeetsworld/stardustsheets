@@ -4,11 +4,11 @@ D&D 5.5e campaign tools for a small table: public character sheets, a soft-gated
 
 Live site:
 
-- Campaign roster: https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260613o
-- Encounter Viewer: https://pmeetsworld.github.io/stardustsheets/encounter.html?app=20260613o
-- DM Screen: https://pmeetsworld.github.io/stardustsheets/dm.html?app=20260613o
+- Campaign roster: https://pmeetsworld.github.io/stardustsheets/campaign.html?app=20260614b
+- Encounter Viewer: https://pmeetsworld.github.io/stardustsheets/encounter.html?app=20260614b
+- DM Screen: https://pmeetsworld.github.io/stardustsheets/dm.html?app=20260614b
 
-Current app build: `20260613o`
+Current app build: `20260614b`
 
 ## What This Is
 
@@ -16,9 +16,9 @@ This is a static GitHub Pages site backed by Supabase.
 
 - GitHub Pages hosts the HTML, CSS, and JavaScript.
 - Supabase stores character sheet data, portrait/image data, DM session notes, and combat state.
-- Character sheets autosave to Supabase when opened with a secret edit link.
-- Public sheet links are read-only.
-- The DM Screen is protected by a soft password gate only. It is not real security.
+- Character sheets open read-only from normal roster links.
+- The sheet toolbar has an `Edit` button; entering `712` unlocks editing and Supabase autosave for 12 hours on that device.
+- The DM Screen is protected by the same soft password gate, `712`. It is not real security.
 - The Encounter Viewer is public and shows initiative, health status, conditions, and player-owned death-save pips.
 
 ## Main Files
@@ -50,7 +50,7 @@ This is a static GitHub Pages site backed by Supabase.
 - DM Screen
 - Encounter Viewer
 - Jangles
-- Bubranatak
+- Bubaranatak
 - E-Jinx
 - Patch
 
@@ -59,13 +59,13 @@ This is a static GitHub Pages site backed by Supabase.
 Each character sheet uses:
 
 ```text
-sheet.html?app=20260613o&slug=<character-slug>
+sheet.html?app=20260614b&slug=<character-slug>
 ```
 
-Edit links add:
+Editing:
 
 ```text
-&edit=<secret-edit-key>
+Click Edit, enter 712.
 ```
 
 The sheet supports:
@@ -84,7 +84,7 @@ The sheet supports:
 `dm.html` uses the soft password:
 
 ```text
-AEGIS DM 712
+712
 ```
 
 It includes:
@@ -188,7 +188,7 @@ This repo is the GitHub Pages source.
 
 After edits:
 
-1. Bump the app build token everywhere, currently `20260613o`.
+1. Bump the app build token everywhere, currently `20260614b`.
 2. Keep `sheet.html` and `Character Sheet.html` in sync.
 3. Update `sw.js` `APP_BUILD`.
 4. Run syntax checks on changed JS:
@@ -218,5 +218,4 @@ After edits:
 - Add condition chips/editing UX for custom combatants instead of comma-separated text.
 - Add encounter presets or monster templates.
 - Build AcroForm PDF export from rendered `[data-k]` and `[data-t]` element positions.
-- Add a small admin page for managing player edit links and character rows.
-
+- Add a small admin page for managing character rows and configured edit keys.

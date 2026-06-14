@@ -1,4 +1,4 @@
-const APP_BUILD = '20260613o';
+const APP_BUILD = '20260614b';
 const SHELL_CACHE = 'aegis-shell-' + APP_BUILD;
 
 self.addEventListener('install', (event) => {

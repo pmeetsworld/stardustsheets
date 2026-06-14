@@ -5,6 +5,7 @@
   var params = new URLSearchParams(window.location.search);
   var slug = params.get('slug') || '';
   var editKey = params.get('edit') || '';
+  var legacyEditLink = !!editKey;
   var isEdit = !!editKey;
   var currentCharacter = null;
   var saveTimer = null;
@@ -14,6 +15,9 @@
   var pollTimer = null;
   var POLL_MS = 10000;
   var CACHE_PREFIX = 'aegis-cloud-character-v1:';
+  var EDIT_UNLOCK_PREFIX = 'aegis-sheet-edit-unlocked-until-v1:';
+  var SHEET_EDIT_PASSWORD = '712';
+  var EDIT_UNLOCK_MS = 12 * 60 * 60 * 1000;
   var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   var realtimeClient = null;
   var realtimeChannel = null;
@@ -38,6 +42,99 @@
     if (!el) return;
     el.textContent = text;
     el.dataset.state = state || '';
+  }
+
+  function characterConfig(){
+    var chars = config.characters || [];
+    for (var i = 0; i < chars.length; i += 1) {
+      if (chars[i].slug === slug) return chars[i];
+    }
+    return null;
+  }
+
+  function configuredEditKey(){
+    var c = characterConfig();
+    return c && (c.editKey || c.edit_key) || '';
+  }
+
+  function editUnlockKey(){
+    return EDIT_UNLOCK_PREFIX + (slug || 'local');
+  }
+
+  function normalizePassword(value){
+    return String(value || '').trim();
+  }
+
+  function hasStoredEditUnlock(){
+    var until = parseInt(localStorage.getItem(editUnlockKey()) || '0', 10);
+    return !!(slug && until && Date.now() < until);
+  }
+
+  function rememberEditUnlock(){
+    try { localStorage.setItem(editUnlockKey(), String(Date.now() + EDIT_UNLOCK_MS)); } catch (err) {}
+  }
+
+  function clearEditUnlock(){
+    try { localStorage.removeItem(editUnlockKey()); } catch (err) {}
+  }
+
+  function updateEditButton(){
+    var btn = document.getElementById('editModeBtn');
+    if (!btn) return;
+    btn.hidden = !slug;
+    btn.textContent = isEdit ? 'Editing' : 'Edit';
+    btn.classList.toggle('on', !!isEdit);
+    btn.setAttribute('aria-pressed', isEdit ? 'true' : 'false');
+    btn.title = isEdit ? 'Editing is unlocked on this device' : 'Unlock editing with access code';
+  }
+
+  function setEditMode(next){
+    isEdit = !!next;
+    if (isEdit && !editKey) editKey = configuredEditKey();
+    if (!legacyEditLink && !isEdit) editKey = '';
+    if (window.AegisSheet) window.AegisSheet.setReadOnly(!isEdit && !!slug);
+    updateEditButton();
+  }
+
+  async function lockEditMode(){
+    if (legacyEditLink) return alert('This legacy edit link stays unlocked. Use the normal roster link for password-gated editing.');
+    if (dirty || saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      try { await saveCharacterNow(); } catch (err) { console.error(err); return; }
+    }
+    clearEditUnlock();
+    setEditMode(false);
+    setStatus('View only', 'view');
+  }
+
+  function unlockEditMode(){
+    if (!slug) return;
+    var key = configuredEditKey();
+    if (!key && !editKey) {
+      alert('Edit key unavailable for this character.');
+      return;
+    }
+    var entered = prompt('Character edit access code');
+    if (entered === null) return;
+    if (normalizePassword(entered) !== SHEET_EDIT_PASSWORD) {
+      alert('Access denied.');
+      return;
+    }
+    editKey = editKey || key;
+    rememberEditUnlock();
+    setEditMode(true);
+    setStatus('Edit mode - saved to cloud', 'edit');
+  }
+
+  function initEditModeControl(){
+    var btn = document.getElementById('editModeBtn');
+    if (!btn) return;
+    btn.addEventListener('click', function(){
+      if (isEdit) lockEditMode();
+      else unlockEditMode();
+    });
+    updateEditButton();
   }
 
   function setTitle(character){
@@ -124,6 +221,7 @@
     setTitle(character);
     window.AegisSheet.applyState(character.sheet_data || {}, { skipSave: true });
     window.AegisSheet.setReadOnly(!isEdit);
+    updateEditButton();
     if (!options || !options.cached) writeCachedCharacter(character);
   }
 
@@ -155,7 +253,7 @@
       }
       var rows = await res.json();
       if (!rows.length) {
-        setStatus('Save denied - bad edit link', 'error');
+        setStatus('Save denied - bad edit code', 'error');
         throw new Error('Save denied: edit key did not match this character.');
       }
       if (currentCharacter) {
@@ -265,7 +363,7 @@
     });
 
     if (importBtn && importFile) importBtn.addEventListener('click', function(){
-      if (!isEdit) return alert('Open the secret edit link before importing.');
+      if (!isEdit) return alert('Unlock editing with code 712 before importing.');
       importFile.click();
     });
 
@@ -289,9 +387,13 @@
 
   async function boot(){
     initExportImport();
+    initEditModeControl();
     var ready = await waitForSheetApi();
     if (!ready) return setStatus('Sheet API unavailable', 'error');
+    if (!editKey && hasStoredEditUnlock()) editKey = configuredEditKey();
+    isEdit = !!editKey;
     if (slug && !isEdit) window.AegisSheet.setReadOnly(true);
+    updateEditButton();
     var cachedApplied = false;
 
     var cached = readCachedCharacter();

@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
 <script>
 (function(){
-  var build = '20260613o';
+  var build = '20260614b';
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
   }
@@ -20,7 +20,7 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613o">
+<link rel="stylesheet" href="styles.css?v=20260614b">
 <style>
 body{ padding:48px 16px; min-height:100vh; }
 .roster-shell{
@@ -70,11 +70,11 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
       </div>
     </div>
     <div class="roster-actions">
-      <a class="roster-dm" href="dm.html?app=20260613o">
+      <a class="roster-dm" href="dm.html?app=20260614b">
         <span><b>DM Screen</b>Party stats / Session notes / Combat tracker</span>
         <em>Access</em>
       </a>
-      <a class="roster-dm roster-public" href="encounter.html?app=20260613o">
+      <a class="roster-dm roster-public" href="encounter.html?app=20260614b">
         <span><b>Encounter Viewer</b>Public initiative order / health status / conditions</span>
         <em>Live</em>
       </a>
@@ -82,10 +82,10 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use each player's secret edit link to update that character.</p>
   </main>
-  <script src="cloud-config.js?v=20260613o"></script>
-  <script src="view-mode.js?v=20260613o"></script>
+  <script src="cloud-config.js?v=20260614b"></script>
+  <script src="view-mode.js?v=20260614b"></script>
   <script>
-    const APP_VERSION = '20260613o';
+    const APP_VERSION = '20260614b';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `

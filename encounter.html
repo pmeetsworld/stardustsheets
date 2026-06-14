@@ -9,7 +9,7 @@
 <title>AEGIS SOLUTIONS - Encounter Viewer</title>
 <script>
 (function(){
-  var build = '20260613o';
+  var build = '20260614b';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -21,15 +21,15 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260613o">
+<link rel="stylesheet" href="styles.css?v=20260614b">
 </head>
 <body class="encounter-body">
   <div class="toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260613o" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260614b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Encounter Viewer</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260613o">Roster</a>
-    <a class="nav-btn" href="dm.html?app=20260613o">DM Screen</a>
+    <a class="nav-btn" href="campaign.html?app=20260614b">Roster</a>
+    <a class="nav-btn" href="dm.html?app=20260614b">DM Screen</a>
     <span class="hint" id="encounterStatus">Connecting</span>
   </div>
 
@@ -60,8 +60,8 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260613o"></script>
-  <script src="view-mode.js?v=20260613o"></script>
-  <script src="encounter.js?v=20260613o"></script>
+  <script src="cloud-config.js?v=20260614b"></script>
+  <script src="view-mode.js?v=20260614b"></script>
+  <script src="encounter.js?v=20260614b"></script>
 </body>
 </html>

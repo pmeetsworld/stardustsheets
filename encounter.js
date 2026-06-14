@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260613o';
+  var BUILD = window.AEGIS_BUILD || '20260614b';
   var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   var POLL_MS = 12000;
   var config = window.AEGIS_CLOUD || {};

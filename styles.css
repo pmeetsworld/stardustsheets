@@ -89,6 +89,7 @@ body{
 }
 .toolbar button:hover,
 .toolbar .nav-btn:hover{ border-color:var(--red); color:var(--red); }
+.toolbar button.on{ border-color:var(--ice); color:var(--ice-2); }
 #cloudStatus{ max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 #cloudStatus[data-state="saved"],
 #cloudStatus[data-state="edit"]{ color:var(--ice-2); }
