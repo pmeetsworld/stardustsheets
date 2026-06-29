@@ -4268,8 +4268,9 @@ body.view-mobile-effective .dm-note-fields{
   grid-template-columns:1fr;
 }
 body.view-mobile-effective .dm-session-meta{
-  grid-template-columns:minmax(132px,.55fr) minmax(0,1fr) auto;
-  gap:7px;
+  grid-template-columns:128px minmax(0,1fr);
+  column-gap:7px;
+  row-gap:4px;
   align-items:end;
   margin-bottom:8px;
 }
@@ -4286,18 +4287,26 @@ body.view-mobile-effective .dm-session-meta .dm-input{
   font-size:13px;
 }
 body.view-mobile-effective .dm-session-meta .dm-status{
-  align-self:end;
-  max-width:118px;
-  padding-bottom:5px;
+  grid-column:1 / -1;
+  align-self:center;
+  justify-self:end;
+  min-height:10px;
+  max-width:100%;
+  padding:0;
   overflow:hidden;
   text-align:right;
   text-overflow:ellipsis;
   white-space:nowrap;
-  font-size:10px;
+  font-size:8px;
+  line-height:1;
 }
 body.view-mobile-effective .dm-notes-layout,
 body.view-mobile-effective .dm-combat-layout{
   grid-template-columns:1fr;
+}
+body.view-mobile-effective #dmNotes .dm-notes-layout,
+body.view-mobile-effective #dmNotes .dm-note-fields{
+  gap:8px;
 }
 body.view-mobile-effective .dm-note-fields{
   min-height:0;
