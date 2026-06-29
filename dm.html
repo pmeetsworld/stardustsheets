@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260628d';
+  var build = '20260629a';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -28,15 +28,15 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260628d">
+<link rel="stylesheet" href="styles.css?v=20260629a">
 </head>
 <body class="dm-screen-body">
   <div class="toolbar app-toolbar dm-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260628d" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260629a" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260628d">Roster</a>
-    <a class="nav-btn" href="encounter.html?app=20260628d">Encounter</a>
+    <a class="nav-btn" href="campaign.html?app=20260629a">Roster</a>
+    <a class="nav-btn" href="encounter.html?app=20260629a">Encounter</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -157,9 +157,9 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260628d"></script>
-  <script src="view-mode.js?v=20260628d"></script>
-  <script src="field-map.js?v=20260628d"></script>
-  <script src="dm.js?v=20260628d"></script>
+  <script src="cloud-config.js?v=20260629a"></script>
+  <script src="view-mode.js?v=20260629a"></script>
+  <script src="field-map.js?v=20260629a"></script>
+  <script src="dm.js?v=20260629a"></script>
 </body>
 </html>

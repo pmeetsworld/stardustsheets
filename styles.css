@@ -250,7 +250,7 @@ body.view-desktop{
   min-width:900px;
 }
 body.view-desktop.dm-screen-body{
-  min-width:1120px;
+  min-width:0;
 }
 body.view-desktop.encounter-body{
   min-width:0;
