@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">AEGIS Solutions</title>
+  <rect width="512" height="512" rx="88" fill="#111315"/>
+  <path d="M256 58 414 125v137c0 94-68 160-158 192C166 422 98 356 98 262V125Z"
+        fill="#1f2327" stroke="#ff5a3c" stroke-width="22"/>
+  <path d="m256 144 83 226h-51l-32-91-32 91h-51Z" fill="#ff5a3c"/>
+  <path d="M130 111 256 58l126 53" fill="none" stroke="#7f99bd" stroke-width="8" opacity=".8"/>
+</svg>

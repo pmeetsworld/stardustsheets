@@ -8,6 +8,18 @@
   var KEY = 'stellar-compendium-v1';
   var store = {};
   try { store = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e){ store = {}; }
+  var FEATURE_UI_KEY = 'aegis-feature-collapse-v1';
+  var featureUi = {};
+  try { featureUi = JSON.parse(localStorage.getItem(FEATURE_UI_KEY) || '{}'); } catch(e){ featureUi = {}; }
+  var SLOT_UI_KEY = 'aegis-slot-collapse-v1';
+  var slotUi = {};
+  try { slotUi = JSON.parse(localStorage.getItem(SLOT_UI_KEY) || '{}'); } catch(e){ slotUi = {}; }
+  var SPELL_UI_KEY = 'aegis-spell-section-collapse-v1';
+  var spellUi = {};
+  try { spellUi = JSON.parse(localStorage.getItem(SPELL_UI_KEY) || '{}'); } catch(e){ spellUi = {}; }
+  var PROFILE_UI_KEY = 'aegis-profile-collapse-v1';
+  var profileUi = {};
+  try { profileUi = JSON.parse(localStorage.getItem(PROFILE_UI_KEY) || '{}'); } catch(e){ profileUi = {}; }
   var changeListeners = [];
   var imageChangeWired = false;
   var pendingImages = null;
@@ -53,16 +65,43 @@
       document.querySelectorAll('[data-k="' + k + '"]').forEach(function(o){
         if (o !== el && o.innerHTML !== el.innerHTML) o.innerHTML = el.innerHTML;
       });
+      if (el.closest('.slot')) updateSlotRemaining();
+      if (el.closest('.feat-page')) updateFeatureSummary(el);
+      if (el.closest('.spell-table-panel')) updateSpellSectionControls();
       save();
     });
   }
   /* ---- toggle dots / chips ([data-t]) --------------------- */
+  function isConditionToggle(key){
+    return key && key.indexOf('p1.cond.') === 0;
+  }
+
+  function requestEditUnlock(){
+    var btn = document.getElementById('editModeBtn');
+    if (!btn || btn.hidden) return false;
+    btn.click();
+    return !document.body.classList.contains('read-only');
+  }
+
   function wireToggle(el){
     var k = el.getAttribute('data-t');
+    if (!el.getAttribute('type')) el.setAttribute('type', 'button');
     if (store[k] === 1 || store[k] === true) el.classList.add('on');
     el.addEventListener('click', function(){
-      var on = el.classList.toggle('on');
+      if (document.body.classList.contains('read-only')) {
+        if (isConditionToggle(k) && requestEditUnlock()) {
+          /* continue into the normal toggle path after a successful unlock */
+        } else {
+          return;
+        }
+      }
+      var on = !el.classList.contains('on');
       store[k] = on ? 1 : 0;
+      document.querySelectorAll('[data-t="' + k + '"]').forEach(function(o){
+        o.classList.toggle('on', on);
+      });
+      if (el.closest('.slot')) updateSlotRemaining();
+      if (el.closest('.spell-table-panel')) updateSpellSectionControls();
       save();
     });
   }
@@ -123,6 +162,8 @@
     initFields();
     initToggles();
     wireSpellRowControls();
+    initFeatureCollapse();
+    initProfileCollapse();
     applyImages(state && state.images ? state.images : {}, true);
 
     document.querySelectorAll('[data-k]').forEach(function(el){
@@ -133,6 +174,9 @@
       var k = el.getAttribute('data-t');
       el.classList.toggle('on', store[k] === 1 || store[k] === true);
     });
+    updateSlotRemaining();
+    updateSpellSectionControls();
+    refreshFeatureSummaries();
     renumber();
     requestAnimationFrame(function(){ requestAnimationFrame(snapRuled); });
     if (!options.skipSave) save();
@@ -144,7 +188,11 @@
       el.setAttribute('contenteditable', readOnly ? 'false' : 'true');
     });
     document.querySelectorAll('[data-t], .feat-add, .feat-remove, .spell-add, .row-remove, #resetBtn').forEach(function(el){
-      el.disabled = !!readOnly;
+      var key = el.getAttribute ? el.getAttribute('data-t') : '';
+      var condition = isConditionToggle(key);
+      el.disabled = !!readOnly && !condition;
+      if (condition && readOnly) el.setAttribute('data-locked', 'true');
+      else if (condition) el.removeAttribute('data-locked');
     });
     if (imagesApi()) imagesApi().setReadOnly(!!readOnly);
   }
@@ -223,6 +271,8 @@
     initFields(row);
     initToggles(row);
     wireSpellRowControls(row);
+    setSpellSectionOpen(kind, true, true);
+    updateSpellSectionControls();
     save();
   }
 
@@ -231,6 +281,7 @@
     if (row && row.parentNode) row.parentNode.removeChild(row);
     setRowList(kind, rowList(kind).filter(function(x){ return x !== id; }));
     clearSpellRowData(kind, id);
+    updateSpellSectionControls();
     save();
   }
 
@@ -250,9 +301,188 @@
   }
 
   /* ============================================================
+     EMPTY SPELL SECTION COLLAPSE - keeps martial sheets compact
+     without changing spell field keys or removing rows.
+     ============================================================ */
+  function spellUiSave(){
+    try { localStorage.setItem(SPELL_UI_KEY, JSON.stringify(spellUi)); } catch(e){}
+  }
+
+  function spellSectionPanels(root){
+    if (root && root.classList && root.classList.contains('spell-table-panel')) return [root];
+    return Array.from((root || document).querySelectorAll('.spell-table-panel[data-spell-section]'));
+  }
+
+  function spellSectionKind(panel){
+    return panel.getAttribute('data-spell-section') || (panel.querySelector('.cantrip-list') ? 'cantrip' : 'spell');
+  }
+
+  function spellSectionLabel(kind){
+    return kind === 'cantrip' ? 'cantrips' : 'prepared spells';
+  }
+
+  function spellSectionRows(panel){
+    return Array.from(panel.querySelectorAll('.crow, .sprow'));
+  }
+
+  function rowHasSpellContent(row){
+    var hasText = Array.from(row.querySelectorAll('[data-k]')).some(function(el){
+      return (el.textContent || '').replace(/\s+/g, ' ').trim().length > 0;
+    });
+    if (hasText) return true;
+    return Array.from(row.querySelectorAll('[data-t]')).some(function(el){
+      return el.classList.contains('on');
+    });
+  }
+
+  function spellSectionHasContent(panel){
+    return spellSectionRows(panel).some(rowHasSpellContent);
+  }
+
+  function ensureSpellEmptyToggle(panel){
+    var btn = panel.querySelector('.spell-empty-toggle');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'spell-empty-toggle';
+      btn.innerHTML =
+        '<span class="spell-empty-title"></span>' +
+        '<span class="spell-empty-meta"></span>';
+      btn.addEventListener('click', function(){
+        var kind = spellSectionKind(panel);
+        setSpellSectionOpen(kind, panel.classList.contains('spell-section-collapsed'), true);
+        updateSpellSectionControls(panel);
+      });
+      panel.appendChild(btn);
+    }
+    return btn;
+  }
+
+  function setSpellSectionOpen(kind, open, persist){
+    spellUi[kind] = open ? 1 : 0;
+    if (persist) spellUiSave();
+  }
+
+  function updateSpellSectionControls(root){
+    spellSectionPanels(root).forEach(function(panel){
+      var kind = spellSectionKind(panel);
+      var hasContent = spellSectionHasContent(panel);
+      var open = hasContent || spellUi[kind] === 1;
+      var btn = ensureSpellEmptyToggle(panel);
+      panel.classList.toggle('has-empty-spell-section', !hasContent);
+      panel.classList.toggle('spell-section-collapsed', !hasContent && !open);
+      panel.classList.toggle('show-empty-spells', !hasContent && open);
+      btn.hidden = hasContent;
+      var title = btn.querySelector('.spell-empty-title');
+      var meta = btn.querySelector('.spell-empty-meta');
+      if (title) title.textContent = hasContent ? '' : 'No ' + spellSectionLabel(kind);
+      if (meta) meta.textContent = open ? 'Hide rows' : 'Show rows';
+    });
+  }
+
+  /* ============================================================
      LIVE PAGE NUMBERING — keeps "Page 0X / 0Y" + form codes
      correct no matter how many Features pages are added/removed.
      ============================================================ */
+  function slotTotal(slot){
+    var totalEl = slot.querySelector('.total');
+    if (!totalEl) return null;
+    var raw = (totalEl.textContent || '').replace(/\s+/g, '').trim();
+    if (!raw) return null;
+    var match = raw.match(/\d+/);
+    return match ? parseInt(match[0], 10) : null;
+  }
+
+  function ensureSlotRemaining(slot){
+    var remain = slot.querySelector('.slot-remain');
+    if (!remain) {
+      remain = document.createElement('div');
+      remain.className = 'slot-remain';
+      remain.setAttribute('aria-live', 'polite');
+      var pips = slot.querySelector('.pips');
+      slot.insertBefore(remain, pips || null);
+    }
+    return remain;
+  }
+
+  function updateSlotRemaining(root){
+    (root || document).querySelectorAll('.slot').forEach(function(slot){
+      var remain = ensureSlotRemaining(slot);
+      var total = slotTotal(slot);
+      var spent = slot.querySelectorAll('.pips .dot.on').length;
+      slot.classList.remove('slot-empty', 'slot-unused', 'slot-full', 'slot-depleted', 'slot-overdrawn');
+      if (total == null) {
+        remain.textContent = spent ? 'Set total' : 'No slots';
+        slot.classList.add('slot-empty');
+        if (spent === 0) slot.classList.add('slot-unused');
+        else slot.classList.add('slot-overdrawn');
+        return;
+      }
+      var left = Math.max(0, total - spent);
+      remain.textContent = 'Remaining ' + left + ' / ' + total;
+      if (spent > total) slot.classList.add('slot-overdrawn');
+      else if (left === 0 && total > 0) slot.classList.add('slot-depleted');
+      else if (spent === 0) slot.classList.add('slot-full');
+    });
+    updateSlotCollapseControls(root);
+  }
+
+  function slotUiSave(){
+    try { localStorage.setItem(SLOT_UI_KEY, JSON.stringify(slotUi)); } catch(e){}
+  }
+
+  function slotPanelKey(panel){
+    return panel.getAttribute('data-slot-panel') || 'spell-slots';
+  }
+
+  function slotLevel(slot){
+    var lv = slot.querySelector('.lv');
+    var raw = lv && lv.firstChild ? lv.firstChild.textContent : '';
+    return (raw || '').replace(/\s+/g, '').trim();
+  }
+
+  function slotPanels(root){
+    if (root && root.classList && root.classList.contains('slot-panel')) return [root];
+    return Array.from((root || document).querySelectorAll('.slot-panel'));
+  }
+
+  function ensureSlotEmptyToggle(panel){
+    var btn = panel.querySelector('.slot-empty-toggle');
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'slot-empty-toggle';
+      btn.innerHTML =
+        '<span class="slot-empty-title">Show empty levels</span>' +
+        '<span class="slot-empty-meta"></span>';
+      btn.addEventListener('click', function(){
+        var key = slotPanelKey(panel);
+        slotUi[key] = panel.classList.contains('show-empty-slots') ? 0 : 1;
+        slotUiSave();
+        updateSlotCollapseControls(panel);
+      });
+      panel.appendChild(btn);
+    }
+    return btn;
+  }
+
+  function updateSlotCollapseControls(root){
+    slotPanels(root).forEach(function(panel){
+      var key = slotPanelKey(panel);
+      var unused = Array.from(panel.querySelectorAll('.slot.slot-unused'));
+      var btn = ensureSlotEmptyToggle(panel);
+      var show = slotUi[key] === 1;
+      var levels = unused.map(slotLevel).filter(Boolean).join('-');
+      panel.classList.toggle('has-unused-slots', unused.length > 0);
+      panel.classList.toggle('show-empty-slots', show);
+      btn.hidden = unused.length === 0;
+      var title = btn.querySelector('.slot-empty-title');
+      var meta = btn.querySelector('.slot-empty-meta');
+      if (title) title.textContent = show ? 'Hide empty levels' : 'Show empty levels';
+      if (meta) meta.textContent = levels ? 'Lv ' + levels : '';
+    });
+  }
+
   function renumber(){
     var pages = document.querySelectorAll('.page');
     var total = pages.length;
@@ -287,8 +517,7 @@
           '<div class="wordmark"><span class="name">AEGIS SOLUTIONS</span><span class="sub">Capability Record</span></div>' +
           '<div class="meta"><div class="form" data-formname="FEATURES"></div><div class="pg" data-suffix="Capability Record \u00b7 cont."></div></div>' +
         '</div>' +
-        '<div class="feat-top"><span class="sect-title">Features &amp; Traits \u2014 Continued</span>' +
-          '<div class="feat-legend"><span class="lg-chip class">Class</span><span class="lg-chip sub">Subclass</span><span class="lg-chip species">Species</span><span class="lg-chip feat">Feat</span></div></div>' +
+        '<div class="feat-top"><span class="sect-title">Features &amp; Traits \u2014 Continued</span></div>' +
         '<div class="row grow" style="min-height:0;">' +
           '<div class="panel ref grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.1" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
           '<div class="panel ref grow"><div class="panel-h"><span class="sect-title">Continued</span></div><div class="panel-body"><div class="ruled" contenteditable data-k="feat.cont.' + pid + '.2" data-ph="Continue feature write-ups\u2026"></div></div></div>' +
@@ -305,6 +534,7 @@
     var sec = featTemplate(pid);
     anchor.parentNode.insertBefore(sec, anchor);
     initFields(sec); initToggles(sec);
+    initFeatureCollapse(sec);
     sec.querySelectorAll('.feat-add').forEach(function(b){ b.addEventListener('click', onAdd); });
     var rm = sec.querySelector('.feat-remove');
     if (rm) rm.addEventListener('click', function(){ removeFeaturePage(pid); });
@@ -335,6 +565,145 @@
 
   function restoreFeaturePages(){
     (store['feat.added'] || []).slice().forEach(function(pid){ addFeaturePage(pid, false); });
+  }
+
+  /* ============================================================
+     MOBILE FEATURE COLLAPSE - adds app-style toggles around the
+     existing feature fields without changing their data keys.
+     ============================================================ */
+  function featureUiSave(){
+    try { localStorage.setItem(FEATURE_UI_KEY, JSON.stringify(featureUi)); } catch(e){}
+  }
+
+  function featureLabel(el){
+    var k = el.getAttribute('data-k') || '';
+    if (k === 'feat.class') return 'Class Features';
+    if (k === 'feat.subclass') return 'Subclass';
+    if (k === 'feat.species') return 'Species';
+    if (k === 'feat.other') return 'Feats / Other';
+    if (k.indexOf('feat.cont.') === 0) {
+      var parts = k.split('.');
+      return parts[3] === '2' ? 'Continued B' : 'Continued A';
+    }
+    return 'Feature Notes';
+  }
+
+  function setFeatureCollapsed(wrap, collapsed, persist){
+    var key = wrap.getAttribute('data-feature-key');
+    var btn = wrap.querySelector('.feat-mobile-toggle');
+    wrap.classList.toggle('is-collapsed', !!collapsed);
+    if (btn) {
+      btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      var state = btn.querySelector('.feat-mobile-state');
+      if (state) state.textContent = collapsed ? 'Open' : 'Hide';
+    }
+    if (persist && key) {
+      featureUi[key] = collapsed ? 1 : 0;
+      featureUiSave();
+    }
+  }
+
+  function featureText(el){
+    return (el.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function updateFeatureSummary(el){
+    var wrap = el && el.closest ? el.closest('.feat-mobile-field') : null;
+    if (!wrap) return;
+    var text = featureText(el);
+    var summary = wrap.querySelector('.feat-mobile-summary');
+    wrap.classList.toggle('has-content', !!text);
+    if (summary) summary.textContent = text ? text.slice(0, 62) : 'Empty';
+  }
+
+  function refreshFeatureSummaries(root){
+    (root || document).querySelectorAll('.feat-mobile-field > .ruled').forEach(updateFeatureSummary);
+  }
+
+  function initFeatureCollapse(root){
+    (root || document).querySelectorAll('.feat-page .ruled[data-k]').forEach(function(el){
+      var existing = el.closest('.feat-mobile-field');
+      if (existing) {
+        updateFeatureSummary(el);
+        return;
+      }
+      var key = el.getAttribute('data-k');
+      var wrap = document.createElement('div');
+      wrap.className = 'feat-mobile-field';
+      wrap.setAttribute('data-feature-key', key);
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'feat-mobile-toggle';
+      btn.innerHTML =
+        '<span class="feat-mobile-title"></span>' +
+        '<span class="feat-mobile-summary"></span>' +
+        '<span class="feat-mobile-state">Hide</span>';
+      btn.querySelector('.feat-mobile-title').textContent = featureLabel(el);
+      btn.addEventListener('click', function(){
+        setFeatureCollapsed(wrap, !wrap.classList.contains('is-collapsed'), true);
+      });
+      el.parentNode.insertBefore(wrap, el);
+      wrap.appendChild(btn);
+      wrap.appendChild(el);
+      var hasPreference = Object.prototype.hasOwnProperty.call(featureUi, key);
+      setFeatureCollapsed(wrap, hasPreference ? featureUi[key] === 1 : true, false);
+      updateFeatureSummary(el);
+    });
+  }
+
+  /* ============================================================
+     MOBILE PROFILE COLLAPSE - keeps long roleplay sections compact
+     on phones while preserving the original editable fields.
+     ============================================================ */
+  function profileUiSave(){
+    try { localStorage.setItem(PROFILE_UI_KEY, JSON.stringify(profileUi)); } catch(e){}
+  }
+
+  function profileRowKey(row){
+    var field = row.querySelector('.ruled[data-k]');
+    return field ? field.getAttribute('data-k') : '';
+  }
+
+  function setProfileCollapsed(row, collapsed, persist){
+    var key = profileRowKey(row);
+    row.classList.toggle('is-profile-collapsed', !!collapsed);
+    var label = row.querySelector('.vlabel');
+    if (label) {
+      label.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+      var state = label.querySelector('.profile-collapse-state');
+      if (state) state.textContent = collapsed ? 'Open' : 'Hide';
+    }
+    if (persist && key) {
+      profileUi[key] = collapsed ? 1 : 0;
+      profileUiSave();
+    }
+  }
+
+  function initProfileCollapse(root){
+    (root || document).querySelectorAll('.profile-main .actrow, .profile-bottom .actrow').forEach(function(row){
+      if (row.__profileCollapseWired) return;
+      var key = profileRowKey(row);
+      var label = row.querySelector('.vlabel');
+      if (!key || !label) return;
+      row.__profileCollapseWired = 1;
+      label.setAttribute('role', 'button');
+      label.setAttribute('tabindex', '0');
+      var state = document.createElement('span');
+      state.className = 'profile-collapse-state';
+      label.appendChild(state);
+      function toggle(){
+        setProfileCollapsed(row, !row.classList.contains('is-profile-collapsed'), true);
+      }
+      label.addEventListener('click', toggle);
+      label.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          toggle();
+        }
+      });
+      var hasPreference = Object.prototype.hasOwnProperty.call(profileUi, key);
+      setProfileCollapsed(row, hasPreference ? profileUi[key] === 1 : true, false);
+    });
   }
 
   /* ============================================================
@@ -376,6 +745,10 @@
     btn.addEventListener('click', function(){
       if (!confirm('Clear every field on all pages? This cannot be undone.')) return;
       localStorage.removeItem(KEY);
+      localStorage.removeItem(FEATURE_UI_KEY);
+      localStorage.removeItem(SLOT_UI_KEY);
+      localStorage.removeItem(SPELL_UI_KEY);
+      localStorage.removeItem(PROFILE_UI_KEY);
       location.reload();
     });
   }
@@ -390,13 +763,17 @@
     restoreSpellRows();
     initFields();
     initToggles();
+    updateSlotRemaining();
     wireSpellRowControls();
+    updateSpellSectionControls();
     wireImageChanges();
     window.addEventListener('aegis-images-ready', wireImageChanges);
     document.querySelectorAll('.feat-add').forEach(function(b){
       if (!b.__wiredAdd){ b.__wiredAdd = 1; b.addEventListener('click', onAdd); }
     });
     restoreFeaturePages();
+    initFeatureCollapse();
+    initProfileCollapse();
     renumber();
     initReset();
     initPrint();

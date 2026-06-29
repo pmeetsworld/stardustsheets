@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260614b';
+  var BUILD = window.AEGIS_BUILD || '20260628c';
   var PASSWORD = '712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -11,7 +11,27 @@
   var UNLOCK_MS = 12 * 60 * 60 * 1000;
   var PARTY_POLL_MS = 7000;
   var COMBAT_SAVE_MS = 10000;
-  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
+  var FIELDS = window.AEGIS_FIELDS || {};
+  var LIVE_FIELDS = FIELDS.live || {};
+  var SKILL_FIELDS = FIELDS.skills || {};
+  var CONDITION_PREFIX = FIELDS.conditionPrefix || 'p1.cond.';
+  var CONDITION_LABELS = FIELDS.conditionLabels || {
+    blinded: 'Blinded',
+    charmed: 'Charmed',
+    deafened: 'Deafened',
+    frightened: 'Frightened',
+    grappled: 'Grappled',
+    incapacitated: 'Incapacitated',
+    invisible: 'Invisible',
+    paralyzed: 'Paralyzed',
+    petrified: 'Petrified',
+    poisoned: 'Poisoned',
+    prone: 'Prone',
+    restrained: 'Restrained',
+    stunned: 'Stunned',
+    unconscious: 'Unconscious'
+  };
 
   var config = window.AEGIS_CLOUD || {};
   var characters = [];
@@ -27,13 +47,16 @@
   };
   var sessions = [];
   var currentSession = null;
-  var pcHpVisible = localStorage.getItem(PC_HP_VIS_KEY) !== '0';
+  var pcHpVisible = localStorage.getItem(PC_HP_VIS_KEY) === '1';
   var combatSaveTimer = null;
   var partyPollTimer = null;
   var combatCloudReady = true;
   var sessionsCloudReady = true;
   var realtimeClient = null;
   var realtimeChannel = null;
+  var realtimeRetryTimer = null;
+  var realtimeRetryCount = 0;
+  var REALTIME_RETRY_MAX = 3;
 
   var els = {};
 
@@ -44,7 +67,7 @@
       'dmLock','dmApp','dmUnlockForm','dmPassword','dmLockError','dmCloudStatus',
       'partyGrid','refreshPartyBtn','togglePcHpBtn','newSessionBtn','saveSessionBtn','sessionDate',
       'sessionTitle','sessionStatus','sessionNotesA','sessionNotesB','sessionList',
-      'reloadSessionsBtn','addPartyBtn','addCustomBtn','restoreCombatBtn',
+      'reloadSessionsBtn','exportSessionBtn','addPartyBtn','addCustomBtn','restoreCombatBtn',
       'clearCombatBtn','roundInput','roundMinusBtn','roundPlusBtn','combatStatus',
       'combatLiveBtn','combatantsList','encounterNotes','encounterStatus'
     ].forEach(function(id){ els[id] = $(id); });
@@ -117,7 +140,7 @@
   }
 
   function passiveFromSenses(character, name){
-    var senses = field(character, 'p1.senses', '');
+    var senses = field(character, LIVE_FIELDS.senses || 'p1.senses', '');
     var match = senses.match(new RegExp('Passive\\s+' + name + '\\s*(\\d+)', 'i'));
     return match ? match[1] : '';
   }
@@ -132,20 +155,20 @@
   }
 
   function characterStats(character){
-    var maxHp = asNumber(field(character, 'p1.maxhp'), 0);
-    var curHp = asNumber(field(character, 'p1.curhp'), maxHp);
+    var maxHp = asNumber(field(character, LIVE_FIELDS.maxHp || 'p1.maxhp'), 0);
+    var curHp = asNumber(field(character, LIVE_FIELDS.currentHp || 'p1.curhp'), maxHp);
     return {
       slug: character.slug,
       player: character.player_name || character.player || '',
-      name: field(character, 'p1.name', character.name || character.slug),
-      ac: field(character, 'p1.ac', '-'),
+      name: field(character, LIVE_FIELDS.name || 'p1.name', character.name || character.slug),
+      ac: field(character, LIVE_FIELDS.armorClass || 'p1.ac', '-'),
       currentHp: curHp,
       maxHp: maxHp,
-      tempHp: field(character, 'p1.temphp', '0'),
-      passive: passiveScore(character, 'p1.sk.perc.m', 'p1.passive', 'Perception'),
-      passiveInsight: passiveScore(character, 'p1.sk.insi.m', '', 'Insight'),
-      passiveInvestigation: passiveScore(character, 'p1.sk.inve.m', '', 'Investigation'),
-      speed: field(character, 'p1.speed', '-'),
+      tempHp: field(character, LIVE_FIELDS.tempHp || 'p1.temphp', '0'),
+      passive: passiveScore(character, SKILL_FIELDS.perceptionMod || 'p1.sk.perc.m', LIVE_FIELDS.passivePerception || 'p1.passive', 'Perception'),
+      passiveInsight: passiveScore(character, SKILL_FIELDS.insightMod || 'p1.sk.insi.m', '', 'Insight'),
+      passiveInvestigation: passiveScore(character, SKILL_FIELDS.investigationMod || 'p1.sk.inve.m', '', 'Investigation'),
+      speed: field(character, LIVE_FIELDS.speed || 'p1.speed', '-'),
       sheetUrl: 'sheet.html?app=' + BUILD + '&slug=' + encode(character.slug)
     };
   }
@@ -168,27 +191,10 @@
     return { label: 'Healthy', className: 'is-healthy' };
   }
 
-  var CONDITION_LABELS = {
-    blinded: 'Blinded',
-    charmed: 'Charmed',
-    deafened: 'Deafened',
-    frightened: 'Frightened',
-    grappled: 'Grappled',
-    incapacitated: 'Incapacitated',
-    invisible: 'Invisible',
-    paralyzed: 'Paralyzed',
-    petrified: 'Petrified',
-    poisoned: 'Poisoned',
-    prone: 'Prone',
-    restrained: 'Restrained',
-    stunned: 'Stunned',
-    unconscious: 'Unconscious'
-  };
-
   function activeConditions(character){
     var toggles = character && character.sheet_data && character.sheet_data.toggles ? character.sheet_data.toggles : {};
     return Object.keys(CONDITION_LABELS).filter(function(key){
-      return toggles['p1.cond.' + key] === 1 || toggles['p1.cond.' + key] === true;
+      return toggles[CONDITION_PREFIX + key] === 1 || toggles[CONDITION_PREFIX + key] === true;
     }).map(function(key){ return CONDITION_LABELS[key]; });
   }
 
@@ -290,6 +296,15 @@
     setTopStatus('Locked', 'view');
   }
 
+  function scrollCurrentHash(){
+    if (!location.hash) return;
+    var target = document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (!target) return;
+    setTimeout(function(){
+      target.scrollIntoView({ block: 'start' });
+    }, 80);
+  }
+
   function normalizePassword(value){
     return String(value || '').trim().replace(/\s+/g, ' ').toUpperCase();
   }
@@ -352,10 +367,9 @@
       var s = characterStats(character);
       return [
         '<a class="dm-party-card" href="' + s.sheetUrl + '" target="_blank" rel="noopener">',
-        '<div class="dm-card-top"><div><span class="dm-card-name">' + escapeHtml(s.name) + '</span><span class="dm-card-player">' + escapeHtml(s.player) + '</span></div><span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span></div>',
+        '<div class="dm-card-top"><div><span class="dm-card-name">' + escapeHtml(s.name) + '</span><span class="dm-card-player">' + escapeHtml(s.player) + '<span class="dm-card-speed">Speed ' + escapeHtml(s.speed) + '</span></span></div><span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span></div>',
         pcHpBar(s.currentHp, s.maxHp, s.tempHp),
         '<div class="dm-passive-block"><span class="dm-passive-title">Passive Scores</span><div class="dm-passive-grid" aria-label="Passive scores"><span><em>Perception</em><b>' + escapeHtml(s.passive) + '</b></span><span><em>Insight</em><b>' + escapeHtml(s.passiveInsight) + '</b></span><span><em>Investigation</em><b>' + escapeHtml(s.passiveInvestigation) + '</b></span></div></div>',
-        '<div class="dm-stat-row"><span>Speed <b>' + escapeHtml(s.speed) + '</b></span></div>',
         '</a>'
       ].join('');
     }).join('');
@@ -597,12 +611,14 @@
       '<span class="dm-chip">AC ' + escapeHtml(s.ac) + '</span>',
       '<div class="dm-combat-hp">' + pcHpBar(s.currentHp, s.maxHp, s.tempHp) + '</div>',
       '</div>',
+      '<div class="dm-combat-footer">',
       conditionStrip(conditions),
       '<div class="dm-combat-actions">',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-down" data-id="' + escapeHtml(row.id) + '" title="Move down">Down</button>',
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
       '<button type="button" class="dm-icon-btn" data-action="delete" data-id="' + escapeHtml(row.id) + '" title="Remove">X</button>',
+      '</div>',
       '</div>',
       expanded ? '<div class="dm-combat-notes"><div class="dm-ruled compact" contenteditable="true" data-plain="true" data-combat-field="notes" data-id="' + escapeHtml(row.id) + '">' + escapeHtml(row.notes || '') + '</div></div>' : '',
       '</article>'
@@ -628,6 +644,7 @@
       '<div class="dm-damage-tools"><input type="number" step="1" min="0" placeholder="0" data-damage-id="' + escapeHtml(row.id) + '"><button type="button" data-action="damage" data-id="' + escapeHtml(row.id) + '">Damage</button><button type="button" data-action="heal" data-id="' + escapeHtml(row.id) + '">Heal</button></div>',
       '<label class="dm-wide-field"><span>Conditions</span><input type="text" value="' + escapeHtml(row.conditions || '') + '" data-combat-field="conditions" data-id="' + escapeHtml(row.id) + '" placeholder="Prone, poisoned..."></label>',
       '</div>',
+      '<div class="dm-combat-footer">',
       conditionStrip(conditions),
       '<div class="dm-combat-actions">',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
@@ -636,6 +653,7 @@
       '<button type="button" class="dm-small ' + (defeated ? 'active' : '') + '" data-action="toggle-defeated" data-id="' + escapeHtml(row.id) + '">' + (defeated ? 'Restore' : 'Defeated') + '</button>',
       '<button type="button" class="dm-small" data-action="duplicate" data-id="' + escapeHtml(row.id) + '">Duplicate</button>',
       '<button type="button" class="dm-icon-btn" data-action="delete" data-id="' + escapeHtml(row.id) + '" title="Remove">X</button>',
+      '</div>',
       '</div>',
       defeated && !expanded ? '<div class="dm-defeated-line">Defeated - notes hidden</div>' : '',
       expanded ? '<div class="dm-combat-notes"><div class="dm-ruled compact" contenteditable="true" data-plain="true" data-combat-field="notes" data-id="' + escapeHtml(row.id) + '">' + escapeHtml(row.notes || '') + '</div></div>' : '',
@@ -737,13 +755,29 @@
 
   function loadLatestSession(){
     if (sessions.length) {
-      loadSession(sessions[0].id);
+      loadSession(sessions[0].id, true);
     } else {
-      newSession();
+      newSession(true);
     }
   }
 
-  function newSession(){
+  function sessionFormChanged(){
+    if (!currentSession || !els.sessionDate) return false;
+    var form = readSessionFromForm();
+    return String(form.session_date || '') !== String(currentSession.session_date || '') ||
+      String(form.title || '') !== String(currentSession.title || '') ||
+      String(form.notes_a || '') !== String(currentSession.notes_a || '') ||
+      String(form.notes_b || '') !== String(currentSession.notes_b || '');
+  }
+
+  function confirmSessionReplacement(){
+    if (!sessionFormChanged()) return true;
+    return confirm('You have unsaved session changes. Replace this draft?');
+  }
+
+  function newSession(skipPrompt){
+    if (skipPrompt !== true && !confirmSessionReplacement()) return;
+    localStorage.removeItem(SESSION_DRAFT_KEY);
     var date = todayString();
     currentSession = {
       id: null,
@@ -758,9 +792,12 @@
     saveDraft();
   }
 
-  function loadSession(id){
+  function loadSession(id, skipPrompt){
     var session = sessions.find(function(s){ return s.id === id; });
     if (!session) return;
+    var replacingDraft = sessionFormChanged();
+    if (skipPrompt !== true && replacingDraft && !confirmSessionReplacement()) return;
+    if (skipPrompt !== true && replacingDraft) localStorage.removeItem(SESSION_DRAFT_KEY);
     currentSession = Object.assign({}, session);
     applySessionToForm();
     var draft = readDraft();
@@ -873,6 +910,73 @@
     writeLocalSessions();
   }
 
+  function sessionFileName(value){
+    return String(value || 'session-notes')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'session-notes';
+  }
+
+  function exportSession(){
+    if (!currentSession) newSession(true);
+    var session = readSessionFromForm();
+    var text = [
+      session.title,
+      'Date: ' + session.session_date,
+      '',
+      'Notes A',
+      session.notes_a,
+      '',
+      'Notes B',
+      session.notes_b,
+      ''
+    ].join('\r\n');
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = session.session_date + '-' + sessionFileName(session.title) + '.txt';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(link.href);
+    setSessionStatus('Session exported', 'saved');
+  }
+
+  async function deleteSession(id){
+    var session = sessions.find(function(item){ return item.id === id; });
+    if (!session) return;
+    if (!confirm('Delete "' + (session.title || 'Untitled Session') + '"? This cannot be undone.')) return;
+    setSessionStatus('Deleting session...', 'saving');
+
+    try {
+      if (String(id).indexOf('local-') !== 0) {
+        var rows = await rest('dm_sessions?id=eq.' + encode(id) + '&select=id', {
+          method: 'DELETE',
+          headers: { Prefer: 'return=representation' }
+        });
+        if (!rows || !rows.length) throw new Error('Delete denied by the current database policy.');
+        sessionsCloudReady = true;
+      }
+
+      sessions = sessions.filter(function(item){ return item.id !== id; });
+      writeLocalSessions();
+      if (currentSession && currentSession.id === id) {
+        currentSession = null;
+        localStorage.removeItem(SESSION_DRAFT_KEY);
+        loadLatestSession();
+      } else {
+        renderSessionList();
+      }
+      setSessionStatus('Session deleted', 'saved');
+    } catch (err) {
+      setSessionStatus(isSetupError(err) || /policy|denied/i.test(err.message)
+        ? 'Run updated dm-screen-setup.sql'
+        : 'Session delete failed', 'error');
+      console.warn(err);
+    }
+  }
+
   function renderSessionList(){
     if (!els.sessionList) return;
     if (!sessions.length) {
@@ -888,11 +992,14 @@
         minute: '2-digit'
       }) : 'Not saved';
       return [
-        '<button type="button" class="dm-session-item ' + (active ? 'active' : '') + '" data-session-id="' + escapeHtml(s.id) + '">',
-        '<span>' + escapeHtml(s.session_date || '') + '</span>',
-        '<b>' + escapeHtml(s.title || 'Untitled Session') + '</b>',
-        '<small>Edited ' + escapeHtml(updated) + '</small>',
-        '</button>'
+        '<div class="dm-session-row">',
+          '<button type="button" class="dm-session-item ' + (active ? 'active' : '') + '" data-session-id="' + escapeHtml(s.id) + '">',
+          '<span>' + escapeHtml(s.session_date || '') + '</span>',
+          '<b>' + escapeHtml(s.title || 'Untitled Session') + '</b>',
+          '<small>Edited ' + escapeHtml(updated) + '</small>',
+          '</button>',
+          '<button type="button" class="dm-session-delete" data-delete-session-id="' + escapeHtml(s.id) + '" aria-label="Delete ' + escapeHtml(s.title || 'Untitled Session') + '">Delete</button>',
+        '</div>'
       ].join('');
     }).join('');
   }
@@ -940,7 +1047,7 @@
       }
     });
 
-    els.refreshPartyBtn.addEventListener('click', function(){ loadParty(false); });
+    els.refreshPartyBtn.addEventListener('click', reconnectAll);
     els.togglePcHpBtn.addEventListener('click', function(){
       pcHpVisible = !pcHpVisible;
       try { localStorage.setItem(PC_HP_VIS_KEY, pcHpVisible ? '1' : '0'); } catch (err) {}
@@ -950,6 +1057,7 @@
     });
     els.newSessionBtn.addEventListener('click', newSession);
     els.saveSessionBtn.addEventListener('click', saveSession);
+    els.exportSessionBtn.addEventListener('click', exportSession);
     els.reloadSessionsBtn.addEventListener('click', loadSessions);
     els.addPartyBtn.addEventListener('click', addParty);
     els.addCustomBtn.addEventListener('click', function(){ addCustom(); });
@@ -987,6 +1095,11 @@
     });
 
     els.sessionList.addEventListener('click', function(evt){
+      var deleteBtn = evt.target.closest('[data-delete-session-id]');
+      if (deleteBtn) {
+        deleteSession(deleteBtn.getAttribute('data-delete-session-id'));
+        return;
+      }
       var btn = evt.target.closest('[data-session-id]');
       if (btn) loadSession(btn.getAttribute('data-session-id'));
     });
@@ -1021,17 +1134,48 @@
     });
   }
 
+  async function stopRealtime(){
+    clearTimeout(realtimeRetryTimer);
+    realtimeRetryTimer = null;
+    var channel = realtimeChannel;
+    realtimeChannel = null;
+    if (realtimeClient && channel && typeof realtimeClient.removeChannel === 'function') {
+      try { await realtimeClient.removeChannel(channel); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    } else if (channel && typeof channel.unsubscribe === 'function') {
+      try { await channel.unsubscribe(); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    }
+  }
+
+  async function reconnectAll(){
+    setTopStatus('Reconnecting...', 'loading');
+    if (combatSaveTimer) {
+      clearTimeout(combatSaveTimer);
+      combatSaveTimer = null;
+      await saveCombatState(false);
+    }
+    realtimeRetryCount = 0;
+    await stopRealtime();
+    await Promise.all([
+      loadParty(false),
+      loadCombatState(),
+      loadSessions()
+    ]);
+    await startRealtime();
+  }
+
   async function startRealtime(){
     if (realtimeChannel || !hasCloudConfig()) return;
     try {
-      var mod = await import(SUPABASE_JS_URL);
-      realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false
-        }
-      });
+      if (!realtimeClient) {
+        var mod = await import(SUPABASE_JS_URL);
+        realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        });
+      }
       realtimeChannel = realtimeClient
         .channel('aegis-dm-screen')
         .on('postgres_changes', {
@@ -1061,13 +1205,36 @@
           renderCombatants();
         })
         .subscribe(function(status, err){
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('Realtime unavailable; polling remains active.', err || status);
+          if (status === 'SUBSCRIBED') {
+            realtimeRetryCount = 0;
+            clearTimeout(realtimeRetryTimer);
+            realtimeRetryTimer = null;
+            setTopStatus('Realtime connected', 'saved');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            scheduleRealtimeRetry(err || status);
           }
         });
     } catch (err) {
-      console.warn('Realtime unavailable; polling remains active.', err);
+      scheduleRealtimeRetry(err);
     }
+  }
+
+  function scheduleRealtimeRetry(reason){
+    if (realtimeRetryTimer || realtimeRetryCount >= REALTIME_RETRY_MAX) {
+      if (realtimeRetryCount >= REALTIME_RETRY_MAX) {
+        console.warn('Realtime unavailable after retries; polling remains active.', reason);
+        setTopStatus('Polling fallback active', 'loading');
+      }
+      return;
+    }
+    realtimeRetryCount += 1;
+    setTopStatus('Realtime reconnecting...', 'loading');
+    realtimeRetryTimer = setTimeout(function(){
+      realtimeRetryTimer = null;
+      stopRealtime().then(startRealtime).catch(function(err){
+        scheduleRealtimeRetry(err);
+      });
+    }, 1800);
   }
 
   async function initData(){
@@ -1080,6 +1247,7 @@
     if (!partyPollTimer) {
       partyPollTimer = setInterval(function(){ loadParty(true); }, PARTY_POLL_MS);
     }
+    scrollCurrentHash();
   }
 
   function init(){
@@ -1091,6 +1259,7 @@
     } else {
       lock();
     }
+    window.addEventListener('hashchange', scrollCurrentHash);
   }
 
   if (document.readyState === 'loading') {

@@ -18,9 +18,12 @@
   var EDIT_UNLOCK_PREFIX = 'aegis-sheet-edit-unlocked-until-v1:';
   var SHEET_EDIT_PASSWORD = '712';
   var EDIT_UNLOCK_MS = 12 * 60 * 60 * 1000;
-  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
   var realtimeClient = null;
   var realtimeChannel = null;
+  var realtimeRetryTimer = null;
+  var realtimeRetryCount = 0;
+  var REALTIME_RETRY_MAX = 3;
 
   function apiUrl(path){
     return config.supabaseUrl.replace(/\/$/, '') + '/rest/v1/' + path;
@@ -298,17 +301,55 @@
     pollTimer = setInterval(refreshFromCloud, POLL_MS);
   }
 
+  async function stopRealtime(){
+    clearTimeout(realtimeRetryTimer);
+    realtimeRetryTimer = null;
+    var channel = realtimeChannel;
+    realtimeChannel = null;
+    if (realtimeClient && channel && typeof realtimeClient.removeChannel === 'function') {
+      try { await realtimeClient.removeChannel(channel); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    } else if (channel && typeof channel.unsubscribe === 'function') {
+      try { await channel.unsubscribe(); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    }
+  }
+
+  async function reconnectCloud(){
+    if (!slug) {
+      setStatus('Local mode - no character selected', 'local');
+      return;
+    }
+    setStatus('Reconnecting...', 'loading');
+    try {
+      if (saveTimer) {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+      }
+      if (dirty) await saveCharacterNow();
+      realtimeRetryCount = 0;
+      await stopRealtime();
+      var fresh = await fetchCharacter(true);
+      if (fresh) applyRemoteCharacter(fresh);
+      await startRealtime();
+      setStatus(isEdit ? 'Reconnected - edit mode' : 'Reconnected - view only', isEdit ? 'edit' : 'saved');
+    } catch (err) {
+      setStatus('Reconnect failed - cached copy kept', 'error');
+      console.warn('Cloud reconnect failed:', err);
+    }
+  }
+
   async function startRealtime(){
     if (!slug || realtimeChannel || !config.supabaseUrl || !config.supabaseKey) return;
     try {
-      var mod = await import(SUPABASE_JS_URL);
-      realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false
-        }
-      });
+      if (!realtimeClient) {
+        var mod = await import(SUPABASE_JS_URL);
+        realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        });
+      }
       realtimeChannel = realtimeClient
         .channel('aegis-character-' + slug)
         .on('postgres_changes', {
@@ -329,13 +370,35 @@
           });
         })
         .subscribe(function(status, err){
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('Realtime unavailable; polling remains active.', err || status);
+          if (status === 'SUBSCRIBED') {
+            realtimeRetryCount = 0;
+            clearTimeout(realtimeRetryTimer);
+            realtimeRetryTimer = null;
+            setStatus(isEdit ? 'Live edit connected' : 'Live connected', isEdit ? 'edit' : 'saved');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            scheduleRealtimeRetry(err || status);
           }
         });
     } catch (err) {
-      console.warn('Realtime unavailable; polling remains active.', err);
+      scheduleRealtimeRetry(err);
     }
+  }
+
+  function scheduleRealtimeRetry(reason){
+    if (realtimeRetryTimer || realtimeRetryCount >= REALTIME_RETRY_MAX) {
+      if (realtimeRetryCount >= REALTIME_RETRY_MAX) {
+        console.warn('Realtime unavailable after retries; polling remains active.', reason);
+      }
+      return;
+    }
+    realtimeRetryCount += 1;
+    setStatus('Realtime reconnecting...', 'loading');
+    realtimeRetryTimer = setTimeout(function(){
+      realtimeRetryTimer = null;
+      stopRealtime().then(startRealtime).catch(function(err){
+        scheduleRealtimeRetry(err);
+      });
+    }, 1800);
   }
 
   function wireResumeRefresh(){
@@ -348,9 +411,12 @@
   }
 
   function initExportImport(){
+    var reconnectBtn = document.getElementById('reconnectCloudBtn');
     var exportBtn = document.getElementById('exportBtn');
     var importBtn = document.getElementById('importBtn');
     var importFile = document.getElementById('importFile');
+
+    if (reconnectBtn) reconnectBtn.addEventListener('click', reconnectCloud);
 
     if (exportBtn) exportBtn.addEventListener('click', function(){
       var state = window.AegisSheet ? window.AegisSheet.getState() : {};

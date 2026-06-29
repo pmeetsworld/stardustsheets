@@ -3,13 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111315">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AEGIS Encounter">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/aegis-app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/aegis-apple-touch-icon.png">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>AEGIS SOLUTIONS - Encounter Viewer</title>
 <script>
 (function(){
-  var build = '20260614b';
+  var build = '20260628c';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -21,15 +28,15 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260614b">
+<link rel="stylesheet" href="styles.css?v=20260628c">
 </head>
 <body class="encounter-body">
-  <div class="toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260614b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+  <div class="toolbar app-toolbar encounter-toolbar">
+    <a class="brand brand-link" href="campaign.html?app=20260628c" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Encounter Viewer</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260614b">Roster</a>
-    <a class="nav-btn" href="dm.html?app=20260614b">DM Screen</a>
+    <a class="nav-btn" href="campaign.html?app=20260628c">Roster</a>
+    <a class="nav-btn" href="dm.html?app=20260628c">DM Screen</a>
     <span class="hint" id="encounterStatus">Connecting</span>
   </div>
 
@@ -42,6 +49,7 @@
       <div class="encounter-meta">
         <span class="enc-live-pill" id="encounterLivePill">Waiting</span>
         <span class="enc-round-pill">Round <b id="encounterRound">-</b></span>
+        <button type="button" class="enc-reconnect" id="encounterReconnectBtn">Retry</button>
       </div>
     </section>
 
@@ -56,12 +64,20 @@
         <span>Initiative Order</span>
         <span id="encounterUpdated">Live sync ready</span>
       </div>
+      <div class="enc-table-head" aria-hidden="true">
+        <span>Init</span>
+        <span>Combatant</span>
+        <span>Status</span>
+        <span>Defense</span>
+        <span>Conditions</span>
+      </div>
       <div class="enc-list" id="encounterList"></div>
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260614b"></script>
-  <script src="view-mode.js?v=20260614b"></script>
-  <script src="encounter.js?v=20260614b"></script>
+  <script src="cloud-config.js?v=20260628c"></script>
+  <script src="view-mode.js?v=20260628c"></script>
+  <script src="field-map.js?v=20260628c"></script>
+  <script src="encounter.js?v=20260628c"></script>
 </body>
 </html>

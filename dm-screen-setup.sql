@@ -28,6 +28,7 @@ alter table public.dm_state enable row level security;
 drop policy if exists "Anyone can view dm sessions" on public.dm_sessions;
 drop policy if exists "Anyone can insert dm sessions" on public.dm_sessions;
 drop policy if exists "Anyone can update dm sessions" on public.dm_sessions;
+drop policy if exists "Anyone can delete dm sessions" on public.dm_sessions;
 drop policy if exists "Anyone can view dm state" on public.dm_state;
 drop policy if exists "Anyone can insert dm state" on public.dm_state;
 drop policy if exists "Anyone can update dm state" on public.dm_state;
@@ -48,6 +49,11 @@ for update
 using (true)
 with check (true);
 
+create policy "Anyone can delete dm sessions"
+on public.dm_sessions
+for delete
+using (true);
+
 create policy "Anyone can view dm state"
 on public.dm_state
 for select
@@ -64,7 +70,7 @@ for update
 using (true)
 with check (true);
 
-grant select, insert, update on public.dm_sessions to anon, authenticated;
+grant select, insert, update, delete on public.dm_sessions to anon, authenticated;
 grant select, insert, update on public.dm_state to anon, authenticated;
 
 do $$
@@ -77,6 +83,13 @@ end $$;
 do $$
 begin
   alter publication supabase_realtime add table public.dm_sessions;
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.characters;
 exception
   when duplicate_object then null;
 end $$;

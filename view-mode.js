@@ -93,8 +93,150 @@
     }
   }
 
+  function initToolbarMenu(){
+    var toolbar = document.querySelector('.sheet-toolbar');
+    var btn = document.getElementById('sheetMenuBtn');
+    var menu = document.getElementById('sheetToolbarActions');
+    if (!toolbar || !btn || !menu || btn.__wiredToolbarMenu) return;
+    btn.__wiredToolbarMenu = 1;
+
+    function setOpen(open){
+      toolbar.classList.toggle('menu-open', !!open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    btn.addEventListener('click', function(evt){
+      evt.stopPropagation();
+      setOpen(!toolbar.classList.contains('menu-open'));
+    });
+    menu.addEventListener('click', function(evt){
+      if (evt.target.closest('button')) setTimeout(function(){ setOpen(false); }, 0);
+    });
+    document.addEventListener('click', function(evt){
+      if (!toolbar.classList.contains('menu-open')) return;
+      if (toolbar.contains(evt.target)) return;
+      setOpen(false);
+    });
+    document.addEventListener('keydown', function(evt){
+      if (evt.key === 'Escape') setOpen(false);
+    });
+  }
+
+  function isFeatureContinuation(page){
+    var label = page.getAttribute('data-screen-label') || '';
+    return page.classList.contains('feat-cont') || label.indexOf('cont') >= 0;
+  }
+
+  function shortPageLabel(page, index){
+    var label = page.getAttribute('data-screen-label') || '';
+    if (page.id === 'page-arsenal' || label.indexOf('Spells') >= 0) return 'Spells';
+    if (label.indexOf('Operative') >= 0) return 'Combat';
+    if (label.indexOf('Features') >= 0) return 'Features';
+    if (label.indexOf('Profile') >= 0) return 'Profile';
+    return 'Page ' + (index + 1);
+  }
+
+  function sectionTarget(key){
+    if (key === 'skills') return document.querySelector('.page[data-screen-label^="Page 1"] .mp1-abilities');
+    return null;
+  }
+
+  function pageNavItems(pages){
+    var items = [];
+    pages.forEach(function(page, index){
+      if (isFeatureContinuation(page)) return;
+      var label = shortPageLabel(page, index);
+      items.push({ label: label, page: index });
+      if (label === 'Combat' && page.querySelector('.mp1-abilities')) {
+        items.push({ label: 'Skills', target: 'skills' });
+      }
+    });
+    return items;
+  }
+
+  function updatePageNavActive(){
+    var nav = document.querySelector('.sheet-page-nav');
+    if (!nav) return;
+    var pages = Array.prototype.slice.call(document.querySelectorAll('section.page'));
+    var current = 0;
+    var currentTarget = null;
+    pages.forEach(function(page, index){
+      var rect = page.getBoundingClientRect();
+      if (rect.top <= 130 && rect.bottom > 130) current = index;
+    });
+    if (pages[current] && isFeatureContinuation(pages[current])) {
+      pages.some(function(page, index){
+        var label = page.getAttribute('data-screen-label') || '';
+        if (!isFeatureContinuation(page) && label.indexOf('Features') >= 0) {
+          current = index;
+          return true;
+        }
+        return false;
+      });
+    }
+    nav.querySelectorAll('[data-page-target]').forEach(function(btn){
+      var target = sectionTarget(btn.getAttribute('data-page-target'));
+      if (!target) return;
+      var rect = target.getBoundingClientRect();
+      if (rect.top <= 150 && rect.bottom > 150) currentTarget = btn.getAttribute('data-page-target');
+    });
+    nav.querySelectorAll('button').forEach(function(btn){
+      var targetKey = btn.getAttribute('data-page-target');
+      var active = targetKey
+        ? targetKey === currentTarget
+        : !currentTarget && parseInt(btn.getAttribute('data-page-jump'), 10) === current;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-current', active ? 'page' : 'false');
+    });
+  }
+
+  function buildPageNav(){
+    var pages = Array.prototype.slice.call(document.querySelectorAll('section.page'));
+    if (!pages.length) return;
+    var nav = document.querySelector('.sheet-page-nav');
+    if (!nav) {
+      nav = document.createElement('nav');
+      nav.className = 'sheet-page-nav';
+      nav.setAttribute('aria-label', 'Sheet pages');
+      nav.addEventListener('click', function(evt){
+        var btn = evt.target.closest('[data-page-jump], [data-page-target]');
+        if (!btn) return;
+        var targetKey = btn.getAttribute('data-page-target');
+        if (targetKey) {
+          var section = sectionTarget(targetKey);
+          if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          return;
+        }
+        var index = parseInt(btn.getAttribute('data-page-jump'), 10);
+        var target = document.querySelectorAll('section.page')[index];
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      document.body.appendChild(nav);
+    }
+    document.body.classList.add('has-sheet-page-nav');
+    nav.innerHTML = pageNavItems(pages).map(function(item){
+      if (item.target) return '<button type="button" data-page-target="' + item.target + '">' + item.label + '</button>';
+      return '<button type="button" data-page-jump="' + item.page + '">' + item.label + '</button>';
+    }).join('');
+    updatePageNavActive();
+  }
+
+  function watchPageNav(){
+    if (!document.querySelector('section.page')) return;
+    var pending = 0;
+    var observer = new MutationObserver(function(){
+      clearTimeout(pending);
+      pending = setTimeout(buildPageNav, 40);
+    });
+    observer.observe(document.body, { childList: true });
+    window.addEventListener('scroll', updatePageNavActive, { passive: true });
+  }
+
   function init(){
     buildToggle();
+    initToolbarMenu();
+    buildPageNav();
+    watchPageNav();
     applyMode(requestedMode());
     if (mq) {
       var refresh = function(){ applyMode(storedMode()); };

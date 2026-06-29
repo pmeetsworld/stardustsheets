@@ -1,25 +1,14 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260614b';
-  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  var BUILD = window.AEGIS_BUILD || '20260628c';
+  var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
   var POLL_MS = 12000;
-  var config = window.AEGIS_CLOUD || {};
-  var characters = [];
-  var characterMap = {};
-  var combatState = {
-    id: 'main',
-    combat_active: false,
-    round: 1,
-    combatants: [],
-    updated_at: ''
-  };
-  var realtimeClient = null;
-  var realtimeChannel = null;
-  var pollTimer = null;
-  var els = {};
-
-  var CONDITION_LABELS = {
+  var FIELDS = window.AEGIS_FIELDS || {};
+  var LIVE_FIELDS = FIELDS.live || {};
+  var DEATH_SAVE_FIELDS = FIELDS.deathSaves || {};
+  var CONDITION_PREFIX = FIELDS.conditionPrefix || 'p1.cond.';
+  var CONDITION_LABELS = FIELDS.conditionLabels || {
     blinded: 'Blinded',
     charmed: 'Charmed',
     deafened: 'Deafened',
@@ -35,13 +24,30 @@
     stunned: 'Stunned',
     unconscious: 'Unconscious'
   };
+  var config = window.AEGIS_CLOUD || {};
+  var characters = [];
+  var characterMap = {};
+  var combatState = {
+    id: 'main',
+    combat_active: false,
+    round: 1,
+    combatants: [],
+    updated_at: ''
+  };
+  var realtimeClient = null;
+  var realtimeChannel = null;
+  var realtimeRetryTimer = null;
+  var realtimeRetryCount = 0;
+  var REALTIME_RETRY_MAX = 3;
+  var pollTimer = null;
+  var els = {};
 
   function $(id){ return document.getElementById(id); }
 
   function cacheEls(){
     [
       'encounterStatus','encounterLivePill','encounterRound','encounterWaiting',
-      'encounterBoard','encounterUpdated','encounterList'
+      'encounterBoard','encounterUpdated','encounterList','encounterReconnectBtn'
     ].forEach(function(id){ els[id] = $(id); });
   }
 
@@ -113,16 +119,16 @@
   }
 
   function characterStats(character){
-    var maxHp = asNumber(field(character, 'p1.maxhp'), 0);
-    var currentHp = asNumber(field(character, 'p1.curhp'), maxHp);
+    var maxHp = asNumber(field(character, LIVE_FIELDS.maxHp || 'p1.maxhp'), 0);
+    var currentHp = asNumber(field(character, LIVE_FIELDS.currentHp || 'p1.curhp'), maxHp);
     return {
       slug: character.slug,
-      name: field(character, 'p1.name', character.name || character.slug),
+      name: field(character, LIVE_FIELDS.name || 'p1.name', character.name || character.slug),
       player: character.player_name || character.player || '',
-      ac: field(character, 'p1.ac', '-'),
+      ac: field(character, LIVE_FIELDS.armorClass || 'p1.ac', '-'),
       currentHp: currentHp,
       maxHp: maxHp,
-      speed: field(character, 'p1.speed', '-'),
+      speed: field(character, LIVE_FIELDS.speed || 'p1.speed', '-'),
       sheetUrl: 'sheet.html?app=' + BUILD + '&slug=' + encode(character.slug)
     };
   }
@@ -137,7 +143,7 @@
   function activeConditions(character){
     var toggles = character && character.sheet_data && character.sheet_data.toggles ? character.sheet_data.toggles : {};
     return Object.keys(CONDITION_LABELS).filter(function(key){
-      return toggles['p1.cond.' + key] === 1 || toggles['p1.cond.' + key] === true;
+      return toggles[CONDITION_PREFIX + key] === 1 || toggles[CONDITION_PREFIX + key] === true;
     }).map(function(key){ return CONDITION_LABELS[key]; });
   }
 
@@ -165,8 +171,8 @@
       return total;
     }
     return {
-      successes: count('p1.death.ok'),
-      failures: count('p1.death.f')
+      successes: count(DEATH_SAVE_FIELDS.successPrefix || 'p1.death.ok'),
+      failures: count(DEATH_SAVE_FIELDS.failurePrefix || 'p1.death.f')
     };
   }
 
@@ -183,7 +189,7 @@
     if (stats.currentHp > 0 && !counts.successes && !counts.failures) return '';
     return [
       '<div class="enc-death-line">',
-      '<span>Death Saves</span>',
+      '<span class="enc-death-label">Death Saves</span>',
       '<b>Success</b>' + deathDots('success', counts.successes),
       '<b>Failure</b>' + deathDots('failure', counts.failures),
       '</div>'
@@ -222,9 +228,11 @@
       characterMap = {};
       characters.forEach(function(c){ characterMap[c.slug] = c; });
       render();
+      return true;
     } catch (err) {
       if (!silent) setStatus('Party load failed', 'error');
       console.warn(err);
+      return false;
     }
   }
 
@@ -234,9 +242,11 @@
       if (rows && rows.length) combatState = normalizeCombatState(rows[0]);
       render();
       if (!silent) setStatus('Live feed loaded', 'saved');
+      return true;
     } catch (err) {
       if (!silent) setStatus('Encounter load failed', 'error');
       console.warn(err);
+      return false;
     }
   }
 
@@ -264,12 +274,11 @@
     return [
       '<article class="enc-card enc-pc">',
       '<div class="enc-init">' + escapeHtml(row.initiative || '-') + '</div>',
-      '<div class="enc-main">',
-      '<div class="enc-name-row"><a href="' + s.sheetUrl + '" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a><span>PC</span></div>',
-      '<div class="enc-stat-row"><span>AC ' + escapeHtml(s.ac) + '</span><span>Speed ' + escapeHtml(s.speed) + '</span>' + statusBadge(status) + '</div>',
+      '<div class="enc-name-cell"><a href="' + s.sheetUrl + '" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a><span>PC</span></div>',
+      '<div class="enc-status-cell">' + statusBadge(status) + '</div>',
+      '<div class="enc-defense-cell"><span>AC ' + escapeHtml(s.ac) + '</span><span>Speed ' + escapeHtml(s.speed) + '</span></div>',
       conditionStrip(activeConditions(character)),
       deathSaveLine(character, s),
-      '</div>',
       '</article>'
     ].join('');
   }
@@ -281,11 +290,10 @@
     return [
       '<article class="enc-card enc-custom">',
       '<div class="enc-init">' + escapeHtml(row.initiative || '-') + '</div>',
-      '<div class="enc-main">',
-      '<div class="enc-name-row"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span>Combatant</span></div>',
-      '<div class="enc-stat-row"><span>AC ' + escapeHtml(row.ac || '-') + '</span>' + statusBadge(status) + '</div>',
+      '<div class="enc-name-cell"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span>Combatant</span></div>',
+      '<div class="enc-status-cell">' + statusBadge(status) + '</div>',
+      '<div class="enc-defense-cell"><span>AC ' + escapeHtml(row.ac || '-') + '</span></div>',
       conditionStrip(splitConditions(row.conditions)),
-      '</div>',
       '</article>'
     ].join('');
   }
@@ -303,9 +311,11 @@
     els.encounterRound.textContent = live ? String(combatState.round || 1) : '-';
     els.encounterLivePill.textContent = live ? 'Combat Live' : 'Waiting';
     els.encounterLivePill.classList.toggle('on', live);
-    els.encounterUpdated.textContent = combatState.updated_at
-      ? 'Updated ' + new Date(combatState.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-      : 'Live sync ready';
+    els.encounterUpdated.textContent = (rows.length ? rows.length + ' visible - ' : '') + (
+      combatState.updated_at
+        ? 'Updated ' + new Date(combatState.updated_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        : 'Live sync ready'
+    );
 
     if (!live || !rows.length) {
       els.encounterWaiting.hidden = false;
@@ -323,14 +333,16 @@
   async function startRealtime(){
     if (realtimeChannel || !hasCloudConfig()) return;
     try {
-      var mod = await import(SUPABASE_JS_URL);
-      realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-          detectSessionInUrl: false
-        }
-      });
+      if (!realtimeClient) {
+        var mod = await import(SUPABASE_JS_URL);
+        realtimeClient = mod.createClient(config.supabaseUrl, config.supabaseKey, {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+          }
+        });
+      }
       realtimeChannel = realtimeClient
         .channel('aegis-encounter-viewer')
         .on('postgres_changes', {
@@ -357,13 +369,72 @@
           render();
         })
         .subscribe(function(status, err){
-          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.warn('Realtime unavailable; polling remains active.', err || status);
+          if (status === 'SUBSCRIBED') {
+            realtimeRetryCount = 0;
+            clearTimeout(realtimeRetryTimer);
+            realtimeRetryTimer = null;
+            setStatus('Live feed connected', 'saved');
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            scheduleRealtimeRetry(err || status);
           }
         });
     } catch (err) {
-      console.warn('Realtime unavailable; polling remains active.', err);
+      scheduleRealtimeRetry(err);
     }
+  }
+
+  async function stopRealtime(){
+    clearTimeout(realtimeRetryTimer);
+    realtimeRetryTimer = null;
+    var channel = realtimeChannel;
+    realtimeChannel = null;
+    if (realtimeClient && channel && typeof realtimeClient.removeChannel === 'function') {
+      try { await realtimeClient.removeChannel(channel); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    } else if (channel && typeof channel.unsubscribe === 'function') {
+      try { await channel.unsubscribe(); } catch (err) { console.warn('Realtime disconnect failed.', err); }
+    }
+  }
+
+  function scheduleRealtimeRetry(reason){
+    if (realtimeRetryTimer || realtimeRetryCount >= REALTIME_RETRY_MAX) {
+      if (realtimeRetryCount >= REALTIME_RETRY_MAX) {
+        console.warn('Realtime unavailable after retries; polling remains active.', reason);
+        setStatus('Polling fallback active', 'loading');
+      }
+      return;
+    }
+    realtimeRetryCount += 1;
+    setStatus('Realtime reconnecting...', 'loading');
+    realtimeRetryTimer = setTimeout(function(){
+      realtimeRetryTimer = null;
+      stopRealtime().then(startRealtime).catch(function(err){
+        scheduleRealtimeRetry(err);
+      });
+    }, 1800);
+  }
+
+  function setLoadResult(results){
+    if (results.every(Boolean)) {
+      setStatus('Live feed loaded', 'saved');
+    } else if (results.some(Boolean)) {
+      setStatus('Partial feed - retrying', 'loading');
+    } else {
+      setStatus('Cloud unavailable - retrying', 'error');
+    }
+  }
+
+  async function refreshEncounter(showLoading){
+    if (showLoading) setStatus('Reconnecting...', 'loading');
+    var results = await Promise.all([loadParty(true), loadCombatState(true)]);
+    setLoadResult(results);
+    return results;
+  }
+
+  async function reconnectEncounter(){
+    realtimeRetryCount = 0;
+    await stopRealtime();
+    await refreshEncounter(true);
+    await startRealtime();
   }
 
   async function boot(){
@@ -372,13 +443,13 @@
       setStatus('Missing cloud config', 'error');
       return;
     }
-    setStatus('Loading encounter...', 'loading');
-    await Promise.all([loadParty(true), loadCombatState(true)]);
-    setStatus('Live feed loaded', 'saved');
-    startRealtime();
+    if (els.encounterReconnectBtn) {
+      els.encounterReconnectBtn.addEventListener('click', reconnectEncounter);
+    }
+    await refreshEncounter(true);
+    await startRealtime();
     pollTimer = setInterval(function(){
-      loadParty(true);
-      loadCombatState(true);
+      refreshEncounter(false);
     }, POLL_MS);
   }
 

@@ -3,13 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#111315">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AEGIS DM">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="assets/aegis-app-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/aegis-apple-touch-icon.png">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260614b';
+  var build = '20260628c';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -21,16 +28,15 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260614b">
+<link rel="stylesheet" href="styles.css?v=20260628c">
 </head>
 <body class="dm-screen-body">
-  <div class="toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260614b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+  <div class="toolbar app-toolbar dm-toolbar">
+    <a class="brand brand-link" href="campaign.html?app=20260628c" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260614b">Roster</a>
-    <a class="nav-btn" href="encounter.html?app=20260614b">Encounter</a>
-    <a class="nav-btn" href="sheet.html?app=20260614b">Blank Sheet</a>
+    <a class="nav-btn" href="campaign.html?app=20260628c">Roster</a>
+    <a class="nav-btn" href="encounter.html?app=20260628c">Encounter</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -67,7 +73,7 @@
             <svg class="eye-closed" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"></path><path d="M10.6 10.6a2.6 2.6 0 0 0 2.8 2.8"></path><path d="M7.2 7.5C4.1 9.1 2.5 12 2.5 12s3.5 6 9.5 6c1.7 0 3.2-.5 4.4-1.1"></path><path d="M13.7 6.2C18.7 7 21.5 12 21.5 12s-.8 1.4-2.4 2.8"></path></svg>
             <span>PC HP</span>
           </button>
-          <button type="button" class="dm-small" id="refreshPartyBtn">Refresh</button>
+          <button type="button" class="dm-small" id="refreshPartyBtn">Reconnect</button>
         </div>
         <div class="dm-party-grid" id="partyGrid"></div>
       </section>
@@ -102,7 +108,10 @@
           <aside class="dm-sessions-panel">
             <div class="dm-subhead">
               <span>Saved Sessions</span>
-              <button type="button" class="dm-text-btn" id="reloadSessionsBtn">Reload</button>
+              <div class="dm-subhead-actions">
+                <button type="button" class="dm-text-btn" id="exportSessionBtn">Export</button>
+                <button type="button" class="dm-text-btn" id="reloadSessionsBtn">Reload</button>
+              </div>
             </div>
             <div class="dm-session-list" id="sessionList"></div>
           </aside>
@@ -148,8 +157,9 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260614b"></script>
-  <script src="view-mode.js?v=20260614b"></script>
-  <script src="dm.js?v=20260614b"></script>
+  <script src="cloud-config.js?v=20260628c"></script>
+  <script src="view-mode.js?v=20260628c"></script>
+  <script src="field-map.js?v=20260628c"></script>
+  <script src="dm.js?v=20260628c"></script>
 </body>
 </html>

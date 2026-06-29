@@ -1,0 +1,64 @@
+{
+  "id": "./campaign.html",
+  "name": "AEGIS Stardust Sheets",
+  "short_name": "AEGIS Sheets",
+  "description": "Live D&D 5.5e character sheets, encounter view, and DM session tools.",
+  "start_url": "./campaign.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e0f11",
+  "theme_color": "#111315",
+  "icons": [
+    {
+      "src": "assets/aegis-app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/aegis-app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Campaign Roster",
+      "short_name": "Roster",
+      "url": "./campaign.html",
+      "icons": [
+        {
+          "src": "assets/aegis-app-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Encounter Viewer",
+      "short_name": "Encounter",
+      "url": "./encounter.html",
+      "icons": [
+        {
+          "src": "assets/aegis-app-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "DM Screen",
+      "short_name": "DM",
+      "url": "./dm.html",
+      "icons": [
+        {
+          "src": "assets/aegis-app-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

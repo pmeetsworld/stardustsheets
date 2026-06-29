@@ -1,16 +1,16 @@
 # AEGIS Solutions - Stardust Sheets
 
-This repository hosts the static web files for **Stardust Sheets**, an AEGIS-themed D&D 5.5e campaign toolkit built for Payton's home game.
+**Stardust Sheets** is an AEGIS-themed D&D 5.5e companion app for Payton's home campaign. It gives players and the DM a shared, live-play-first place to manage characters, sessions, and encounters.
 
-The site provides:
+The project includes:
 
-- A campaign roster for quick navigation.
-- Public character sheets for the player characters.
-- A DM Screen for live party reference, session notes, and combat tracking.
-- A public Encounter Viewer for initiative order, combat status, conditions, and death-save visibility.
+- A campaign roster with direct access to every character.
+- Cloud-synced character sheets with portrait support and password-gated editing.
+- Mobile app and printable desktop layouts for every sheet.
+- A DM Screen with party status, saved session notes, and an autosaving combat tracker.
+- A public Encounter Viewer for initiative, health status, conditions, and death saves.
+- Installable app metadata and offline access to the application shell.
 
-The app is designed as a lightweight table tool: static HTML, CSS, and JavaScript served by GitHub Pages, with Supabase used for shared character data, portraits, session notes, and realtime combat state.
+The site is hosted through GitHub Pages, with Supabase providing shared character data, portraits, session records, and live encounter updates.
 
-Live site:
-
-https://pmeetsworld.github.io/stardustsheets/
+Live site: [pmeetsworld.github.io/stardustsheets](https://pmeetsworld.github.io/stardustsheets/)
