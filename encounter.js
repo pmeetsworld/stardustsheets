@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260629a';
+  var BUILD = window.AEGIS_BUILD || '20260630a';
   var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
   var POLL_MS = 12000;
   var FIELDS = window.AEGIS_FIELDS || {};
@@ -125,7 +125,6 @@
       slug: character.slug,
       name: field(character, LIVE_FIELDS.name || 'p1.name', character.name || character.slug),
       player: character.player_name || character.player || '',
-      ac: field(character, LIVE_FIELDS.armorClass || 'p1.ac', '-'),
       currentHp: currentHp,
       maxHp: maxHp,
       speed: field(character, LIVE_FIELDS.speed || 'p1.speed', '-'),
@@ -272,11 +271,11 @@
     var s = characterStats(character);
     var status = healthStatus(s.currentHp, s.maxHp);
     return [
-      '<article class="enc-card enc-pc">',
+      '<article class="enc-card enc-pc is-ally">',
       '<div class="enc-init">' + escapeHtml(row.initiative || '-') + '</div>',
-      '<div class="enc-name-cell"><a href="' + s.sheetUrl + '" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a><span>PC</span></div>',
+      '<div class="enc-name-cell"><a href="' + s.sheetUrl + '" target="_blank" rel="noopener">' + escapeHtml(s.name) + '</a><span class="enc-side-label is-ally">Ally</span></div>',
       '<div class="enc-status-cell">' + statusBadge(status) + '</div>',
-      '<div class="enc-defense-cell"><span>AC ' + escapeHtml(s.ac) + '</span><span>Speed ' + escapeHtml(s.speed) + '</span></div>',
+      '<div class="enc-defense-cell"><span>Speed ' + escapeHtml(s.speed) + '</span></div>',
       conditionStrip(activeConditions(character)),
       deathSaveLine(character, s),
       '</article>'
@@ -287,12 +286,12 @@
     var current = asNumber(row.currentHp, 0);
     var max = Math.max(0, asNumber(row.maxHp, 0));
     var status = healthStatus(current, max);
+    var side = row.side === 'ally' ? 'ally' : 'foe';
     return [
-      '<article class="enc-card enc-custom">',
+      '<article class="enc-card enc-custom is-' + side + '">',
       '<div class="enc-init">' + escapeHtml(row.initiative || '-') + '</div>',
-      '<div class="enc-name-cell"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span>Combatant</span></div>',
+      '<div class="enc-name-cell"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span class="enc-side-label is-' + side + '">' + (side === 'ally' ? 'Ally' : 'Foe') + '</span></div>',
       '<div class="enc-status-cell">' + statusBadge(status) + '</div>',
-      '<div class="enc-defense-cell"><span>AC ' + escapeHtml(row.ac || '-') + '</span></div>',
       conditionStrip(splitConditions(row.conditions)),
       '</article>'
     ].join('');

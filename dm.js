@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260629a';
+  var BUILD = window.AEGIS_BUILD || '20260630a';
   var PASSWORD = '712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -560,6 +560,7 @@
       maxHp: 1,
       tempHp: '',
       conditions: '',
+      side: 'foe',
       defeated: false,
       notes: '',
       expanded: false,
@@ -631,6 +632,7 @@
     var defeated = !!row.defeated || (max > 0 && current <= 0);
     var expanded = !!row.expanded;
     var conditions = splitConditions(row.conditions);
+    var side = row.side === 'ally' ? 'ally' : 'foe';
     return [
       '<article class="dm-combat-card dm-custom ' + (defeated ? 'defeated' : '') + '" data-id="' + escapeHtml(row.id) + '">',
       '<div class="dm-combat-main">',
@@ -647,6 +649,7 @@
       '<div class="dm-combat-footer">',
       conditionStrip(conditions),
       '<div class="dm-combat-actions">',
+      '<button type="button" class="dm-small dm-side-toggle is-' + side + '" data-action="toggle-side" data-id="' + escapeHtml(row.id) + '" title="Toggle ally or foe">' + (side === 'ally' ? 'Ally' : 'Foe') + '</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-down" data-id="' + escapeHtml(row.id) + '" title="Move down">Down</button>',
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
@@ -691,7 +694,7 @@
   function handleCombatAction(action, id, source){
     var row = findCombatant(id);
     if (!row && action !== 'add') return;
-    if (['delete','duplicate','damage','heal','toggle-defeated'].indexOf(action) >= 0) snapshotCombat();
+    if (['delete','duplicate','damage','heal','toggle-defeated','toggle-side'].indexOf(action) >= 0) snapshotCombat();
 
     if (action === 'toggle-notes') {
       row.expanded = !row.expanded;
@@ -712,6 +715,8 @@
       if (row.currentHp > 0) row.defeated = false;
     } else if (action === 'toggle-defeated' && row.kind === 'custom') {
       row.defeated = !row.defeated;
+    } else if (action === 'toggle-side' && row.kind === 'custom') {
+      row.side = row.side === 'ally' ? 'foe' : 'ally';
     } else if (action === 'move-up') {
       moveCombatant(id, -1);
       return;

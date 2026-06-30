@@ -3,6 +3,11 @@
 
   var KEY = 'aegis-view-mode-v1';
   var MODES = ['auto', 'mobile', 'desktop'];
+  var MODE_LABELS = {
+    auto: 'default',
+    mobile: 'mobile',
+    desktop: 'desktop'
+  };
   var MOBILE_QUERY = '(max-width: 820px)';
   var mq = window.matchMedia ? window.matchMedia(MOBILE_QUERY) : null;
 
@@ -69,7 +74,8 @@
     wrap.setAttribute('role', 'group');
     wrap.setAttribute('aria-label', 'Display mode');
     wrap.innerHTML = MODES.map(function(mode){
-      return '<button type="button" data-view-choice="' + mode + '">' + mode + '</button>';
+      var automatic = mode === 'auto' ? ' aria-label="Default display mode (automatic)"' : '';
+      return '<button type="button" data-view-choice="' + mode + '"' + automatic + '>' + MODE_LABELS[mode] + '</button>';
     }).join('');
     wrap.addEventListener('click', function(evt){
       var btn = evt.target.closest('[data-view-choice]');
