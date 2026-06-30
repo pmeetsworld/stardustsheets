@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260630a';
+  var BUILD = window.AEGIS_BUILD || '20260630b';
   var PASSWORD = '712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -584,6 +584,22 @@
     });
   }
 
+  function combatantSide(value){
+    return ['ally','neutral','foe'].indexOf(value) >= 0 ? value : 'foe';
+  }
+
+  function nextCombatantSide(value){
+    value = combatantSide(value);
+    if (value === 'foe') return 'ally';
+    if (value === 'ally') return 'neutral';
+    return 'foe';
+  }
+
+  function combatantSideLabel(value){
+    value = combatantSide(value);
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
   function renderCombatants(){
     if (!els.combatantsList) return;
     var rows = sortedCombatants();
@@ -632,7 +648,7 @@
     var defeated = !!row.defeated || (max > 0 && current <= 0);
     var expanded = !!row.expanded;
     var conditions = splitConditions(row.conditions);
-    var side = row.side === 'ally' ? 'ally' : 'foe';
+    var side = combatantSide(row.side);
     return [
       '<article class="dm-combat-card dm-custom ' + (defeated ? 'defeated' : '') + '" data-id="' + escapeHtml(row.id) + '">',
       '<div class="dm-combat-main">',
@@ -649,7 +665,7 @@
       '<div class="dm-combat-footer">',
       conditionStrip(conditions),
       '<div class="dm-combat-actions">',
-      '<button type="button" class="dm-small dm-side-toggle is-' + side + '" data-action="toggle-side" data-id="' + escapeHtml(row.id) + '" title="Toggle ally or foe">' + (side === 'ally' ? 'Ally' : 'Foe') + '</button>',
+      '<button type="button" class="dm-small dm-side-toggle is-' + side + '" data-action="toggle-side" data-id="' + escapeHtml(row.id) + '" title="Cycle Ally, Neutral, and Foe">' + combatantSideLabel(side) + '</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-up" data-id="' + escapeHtml(row.id) + '" title="Move up">Up</button>',
       '<button type="button" class="dm-icon-btn" data-action="move-down" data-id="' + escapeHtml(row.id) + '" title="Move down">Down</button>',
       '<button type="button" class="dm-small" data-action="toggle-notes" data-id="' + escapeHtml(row.id) + '">' + (expanded ? 'Hide' : 'Notes') + '</button>',
@@ -716,7 +732,7 @@
     } else if (action === 'toggle-defeated' && row.kind === 'custom') {
       row.defeated = !row.defeated;
     } else if (action === 'toggle-side' && row.kind === 'custom') {
-      row.side = row.side === 'ally' ? 'foe' : 'ally';
+      row.side = nextCombatantSide(row.side);
     } else if (action === 'move-up') {
       moveCombatant(id, -1);
       return;

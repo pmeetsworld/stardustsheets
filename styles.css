@@ -1121,6 +1121,11 @@ body.dm-screen-body{
   color:var(--ice-2);
   background:rgba(127,153,189,.10);
 }
+.dm-side-toggle.is-neutral{
+  border-color:rgba(139,145,153,.58);
+  color:var(--steel-2);
+  background:rgba(139,145,153,.08);
+}
 .dm-side-toggle.is-foe{
   border-color:rgba(255,90,60,.58);
   color:var(--red);
@@ -2102,6 +2107,9 @@ body.encounter-body{
 .enc-card.is-ally{
   border-left-color:rgba(127,153,189,.82);
 }
+.enc-card.is-neutral{
+  border-left-color:rgba(139,145,153,.72);
+}
 .enc-card.is-foe{
   border-left-color:rgba(255,90,60,.76);
 }
@@ -2147,6 +2155,9 @@ body.encounter-body{
 }
 .enc-name-cell .enc-side-label.is-ally{
   color:var(--ice-2);
+}
+.enc-name-cell .enc-side-label.is-neutral{
+  color:var(--steel-2);
 }
 .enc-name-cell .enc-side-label.is-foe{
   color:var(--red);
@@ -4437,6 +4448,11 @@ body.view-mobile-effective .dm-combat-footer .dm-small{
 }
 body.view-mobile-effective .dm-custom .dm-combat-footer{
   align-items:flex-start;
+  flex-direction:column;
+}
+body.view-mobile-effective .dm-custom .dm-combat-footer .dm-condition-strip,
+body.view-mobile-effective .dm-custom .dm-combat-footer .dm-combat-actions{
+  width:100%;
 }
 body.view-mobile-effective .dm-custom .dm-combat-footer .dm-combat-actions{
   flex-wrap:wrap;

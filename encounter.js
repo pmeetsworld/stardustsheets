@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260630a';
+  var BUILD = window.AEGIS_BUILD || '20260630b';
   var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
   var POLL_MS = 12000;
   var FIELDS = window.AEGIS_FIELDS || {};
@@ -260,6 +260,15 @@
     });
   }
 
+  function combatantSide(value){
+    return ['ally','neutral','foe'].indexOf(value) >= 0 ? value : 'foe';
+  }
+
+  function combatantSideLabel(value){
+    value = combatantSide(value);
+    return value.charAt(0).toUpperCase() + value.slice(1);
+  }
+
   function isCustomHidden(row){
     var max = Math.max(0, asNumber(row.maxHp, 0));
     var current = asNumber(row.currentHp, 0);
@@ -286,11 +295,11 @@
     var current = asNumber(row.currentHp, 0);
     var max = Math.max(0, asNumber(row.maxHp, 0));
     var status = healthStatus(current, max);
-    var side = row.side === 'ally' ? 'ally' : 'foe';
+    var side = combatantSide(row.side);
     return [
       '<article class="enc-card enc-custom is-' + side + '">',
       '<div class="enc-init">' + escapeHtml(row.initiative || '-') + '</div>',
-      '<div class="enc-name-cell"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span class="enc-side-label is-' + side + '">' + (side === 'ally' ? 'Ally' : 'Foe') + '</span></div>',
+      '<div class="enc-name-cell"><b>' + escapeHtml(row.name || 'Custom Combatant') + '</b><span class="enc-side-label is-' + side + '">' + combatantSideLabel(side) + '</span></div>',
       '<div class="enc-status-cell">' + statusBadge(status) + '</div>',
       conditionStrip(splitConditions(row.conditions)),
       '</article>'
