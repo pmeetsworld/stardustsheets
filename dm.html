@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260630b';
+  var build = '20260701b';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -28,15 +28,16 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260630b">
+<link rel="stylesheet" href="styles.css?v=20260701b">
+<link rel="stylesheet" href="world.css?v=20260701b">
 </head>
-<body class="dm-screen-body">
+<body class="dm-screen-body" data-world-role="dm">
   <div class="toolbar app-toolbar dm-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260630b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260701b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260630b">Roster</a>
-    <a class="nav-btn" href="encounter.html?app=20260630b">Encounter</a>
+    <a class="nav-btn" href="campaign.html?app=20260701b">Roster</a>
+    <a class="nav-btn" href="world.html?app=20260701b">World</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -58,7 +59,7 @@
     <nav class="dm-mobile-nav" aria-label="DM screen sections">
       <a href="#dmParty">Party</a>
       <a href="#dmNotes">Notes</a>
-      <a href="#dmCombat">Combat</a>
+      <a href="#dmWorld">World</a>
     </nav>
 
     <section class="dm-shell">
@@ -118,7 +119,11 @@
         </div>
       </section>
 
-      <section class="dm-section dm-combat-section" id="dmCombat">
+      <section class="dm-section dm-world-section" id="dmWorld">
+        <div id="worldDmRoot" class="world-host" data-world-role="dm" aria-label="DM World controls"></div>
+      </section>
+
+      <section class="dm-section dm-combat-section" id="dmCombat" hidden aria-hidden="true">
         <div class="dm-section-head">
           <div>
             <p class="dm-kicker">Live Encounter</p>
@@ -157,9 +162,17 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260630b"></script>
-  <script src="view-mode.js?v=20260630b"></script>
-  <script src="field-map.js?v=20260630b"></script>
-  <script src="dm.js?v=20260630b"></script>
+  <script src="cloud-config.js?v=20260701b"></script>
+  <script src="view-mode.js?v=20260701b"></script>
+  <script src="field-map.js?v=20260701b"></script>
+  <script src="world-realtime.js?v=20260701b"></script>
+  <script src="world-board.js?v=20260701b"></script>
+  <script src="world-grid.js?v=20260701b"></script>
+  <script src="world-tokens.js?v=20260701b"></script>
+  <script src="world-templates.js?v=20260701b"></script>
+  <script src="world-turns.js?v=20260701b"></script>
+  <script src="world-assets.js?v=20260701b"></script>
+  <script src="world.js?v=20260701b"></script>
+  <script src="dm.js?v=20260701b"></script>
 </body>
 </html>

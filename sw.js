@@ -1,4 +1,4 @@
-const APP_BUILD = '20260630b';
+const APP_BUILD = '20260701b';
 const SHELL_CACHE = 'aegis-shell-' + APP_BUILD;
 
 const SHELL_FILES = [
@@ -6,11 +6,21 @@ const SHELL_FILES = [
   'sheet.html?app=' + APP_BUILD,
   'dm.html?app=' + APP_BUILD,
   'encounter.html?app=' + APP_BUILD,
+  'world.html?app=' + APP_BUILD,
   'styles.css?v=' + APP_BUILD,
   'cloud-config.js?v=' + APP_BUILD,
   'cloud-save.js?v=' + APP_BUILD,
   'dm.js?v=' + APP_BUILD,
   'encounter.js?v=' + APP_BUILD,
+  'world.css?v=' + APP_BUILD,
+  'world-realtime.js?v=' + APP_BUILD,
+  'world-board.js?v=' + APP_BUILD,
+  'world-grid.js?v=' + APP_BUILD,
+  'world-tokens.js?v=' + APP_BUILD,
+  'world-templates.js?v=' + APP_BUILD,
+  'world-turns.js?v=' + APP_BUILD,
+  'world-assets.js?v=' + APP_BUILD,
+  'world.js?v=' + APP_BUILD,
   'field-map.js?v=' + APP_BUILD,
   'image-slot.js?v=' + APP_BUILD,
   'sheet.js?v=' + APP_BUILD,
@@ -69,6 +79,7 @@ function pageType(url) {
     return 'sheet.html';
   }
   if (path.endsWith('/dm.html')) return 'dm.html';
+  if (path.endsWith('/world.html')) return 'world.html';
   if (path.endsWith('/encounter.html')) return 'encounter.html';
   return '';
 }

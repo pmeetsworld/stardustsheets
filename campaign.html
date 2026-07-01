@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
 <script>
 (function(){
-  var build = '20260630b';
+  var build = '20260701b';
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
   }
@@ -27,7 +27,7 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260630b">
+<link rel="stylesheet" href="styles.css?v=20260701b">
 <style>
 body{ padding:54px 16px; min-height:100vh; }
 .roster-shell{
@@ -88,11 +88,11 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
 </head>
 <body>
   <div class="toolbar app-toolbar campaign-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260630b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260701b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Campaign Roster</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="dm.html?app=20260630b">DM</a>
-    <a class="nav-btn" href="encounter.html?app=20260630b">Encounter</a>
+    <a class="nav-btn" href="dm.html?app=20260701b">DM</a>
+    <a class="nav-btn" href="world.html?app=20260701b">World</a>
   </div>
   <main class="roster-shell">
     <div class="roster-head">
@@ -103,22 +103,22 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
       </div>
     </div>
     <div class="roster-actions">
-      <a class="roster-dm" href="dm.html?app=20260630b">
-        <span><b>DM Screen</b>Party stats / Session notes / Combat tracker</span>
+      <a class="roster-dm" href="dm.html?app=20260701b">
+        <span><b>DM Screen</b>Party stats / Session notes / World controls</span>
         <em>Access</em>
       </a>
-      <a class="roster-dm roster-public" href="encounter.html?app=20260630b">
-        <span><b>Encounter Viewer</b>Public initiative order / health status / conditions</span>
+      <a class="roster-dm roster-public" href="world.html?app=20260701b">
+        <span><b>World Viewer</b>Live battlemap / initiative / shared scenes</span>
         <em>Live</em>
       </a>
     </div>
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use Edit with the table access code to update a sheet.</p>
   </main>
-  <script src="cloud-config.js?v=20260630b"></script>
-  <script src="view-mode.js?v=20260630b"></script>
+  <script src="cloud-config.js?v=20260701b"></script>
+  <script src="view-mode.js?v=20260701b"></script>
   <script>
-    const APP_VERSION = '20260630b';
+    const APP_VERSION = '20260701b';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `

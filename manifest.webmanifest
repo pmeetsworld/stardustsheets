@@ -2,7 +2,7 @@
   "id": "./campaign.html",
   "name": "AEGIS Stardust Sheets",
   "short_name": "AEGIS Sheets",
-  "description": "Live D&D 5.5e character sheets, encounter view, and DM session tools.",
+  "description": "Live D&D 5.5e character sheets, shared World Viewer, and DM session tools.",
   "start_url": "./campaign.html",
   "scope": "./",
   "display": "standalone",
@@ -37,9 +37,9 @@
       ]
     },
     {
-      "name": "Encounter Viewer",
-      "short_name": "Encounter",
-      "url": "./encounter.html",
+      "name": "World Viewer",
+      "short_name": "World",
+      "url": "./world.html",
       "icons": [
         {
           "src": "assets/aegis-app-icon-192.png",

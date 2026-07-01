@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260630b';
+  var BUILD = window.AEGIS_BUILD || '20260701b';
   var PASSWORD = '712';
   var UNLOCK_KEY = 'aegis-dm-unlocked-until-v1';
   var COMBAT_LOCAL_KEY = 'aegis-dm-combat-local-v1';
@@ -1061,6 +1061,12 @@
     els.dmUnlockForm.addEventListener('submit', function(evt){
       evt.preventDefault();
       if (normalizePassword(els.dmPassword.value) === normalizePassword(PASSWORD)) {
+        try {
+          localStorage.setItem('aegis-world-dm-secret-v1', JSON.stringify({
+            secret: els.dmPassword.value,
+            until: Date.now() + UNLOCK_MS
+          }));
+        } catch (err) {}
         els.dmLockError.textContent = '';
         unlock();
       } else {

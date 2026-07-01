@@ -7,8 +7,8 @@ The project includes:
 - A campaign roster with direct access to every character.
 - Cloud-synced character sheets with portrait support and password-gated editing.
 - Mobile app and printable desktop layouts for every sheet.
-- A DM Screen with party status, saved session notes, and an autosaving combat tracker.
-- A public Encounter Viewer for initiative, health status, conditions, and death saves.
+- A DM Screen with party status, saved session notes, and live World controls.
+- A public World Viewer with shared maps and scenes, turn order, tokens, health status, conditions, and death saves.
 - Installable app metadata and offline access to the application shell.
 
 The site is hosted through GitHub Pages, with Supabase providing shared character data, portraits, session records, and live encounter updates.
