@@ -116,6 +116,17 @@
     };
   }
 
+  // Housekeeping: expired unpinned templates are filtered client-side but
+  // the rows would otherwise accumulate all campaign. Sweep them (60 s grace
+  // so other clients finish their fade) whenever a new template is created.
+  function cleanupExpired(){
+    var cutoff = new Date(Date.now() - 60000).toISOString();
+    api.request(
+      'world_templates?pinned=eq.false&expires_at=lt.' + encodeURIComponent(cutoff),
+      { method: 'DELETE', headers: { Prefer: 'return=minimal' } }
+    ).catch(function(){});
+  }
+
   async function commit(template){
     var player = root.access.playerSession();
     var payload = Object.assign({
@@ -139,6 +150,7 @@
     }
     try {
       await api.insertTemplate(payload);
+      cleanupExpired();
       await api.refresh('template-create');
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');

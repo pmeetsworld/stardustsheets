@@ -261,6 +261,25 @@
     }, 90);
   }
 
+  // Character sheet autosaves fire a realtime event per keystroke batch.
+  // Refetch only the characters feed for those instead of all eight tables.
+  var characterTimer = null;
+
+  function scheduleCharacterRefresh(){
+    clearTimeout(characterTimer);
+    characterTimer = setTimeout(function(){
+      characterTimer = null;
+      request('characters?select=slug,name,player_name,sheet_data,updated_at&is_public=eq.true')
+        .then(function(rows){
+          store.characters = normalizeArray(rows);
+          emit('characters');
+        })
+        .catch(function(err){
+          console.warn('Character refresh failed.', err);
+        });
+    }, 200);
+  }
+
   async function stopRealtime(){
     clearTimeout(retryTimer);
     retryTimer = null;
@@ -315,7 +334,8 @@
           schema: 'public',
           table: table
         }, function(){
-          scheduleRefresh('realtime:' + table);
+          if (table === 'characters') scheduleCharacterRefresh();
+          else scheduleRefresh('realtime:' + table);
         });
       });
 

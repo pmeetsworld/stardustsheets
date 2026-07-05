@@ -220,6 +220,8 @@
       if (openTokens[details.getAttribute('data-edit-token')]) details.open = true;
     });
     drawer.scrollTop = scrollTop;
+    // The form was rebuilt from store values; drop any stale preview.
+    if (root.grid && root.grid.clearPreview) root.grid.clearPreview();
   }
 
   async function privileged(name, payload){
@@ -380,6 +382,26 @@
     }
   }
 
+  // Live calibration preview: mirror the form into a local-only grid preview
+  // so the DM sees lines move while nudging values; nothing persists until
+  // Save Grid.
+  function previewGrid(form){
+    if (!root.grid || !root.grid.setPreview) return;
+    var opacity = Number(form.elements.grid_opacity.value);
+    root.grid.setPreview(form.elements.id.value, {
+      cell_px: Number(form.elements.cell_px.value) || 70,
+      offset_x: Number(form.elements.offset_x.value) || 0,
+      offset_y: Number(form.elements.offset_y.value) || 0,
+      grid_scale: Number(form.elements.grid_scale.value) || 1,
+      grid_opacity: isFinite(opacity) ? opacity : 0.5,
+      grid_color: form.elements.grid_color.value,
+      grid_visible: form.elements.grid_visible.checked,
+      snap_enabled: form.elements.snap_enabled.checked,
+      feet_per_cell: Number(form.elements.feet_per_cell.value) || 5,
+      diagonal_rule: form.elements.diagonal_rule.value
+    });
+  }
+
   async function saveGrid(form){
     var data = new FormData(form);
     var payload = {
@@ -399,6 +421,7 @@
     try {
       await privileged('world_upsert_map', { p_payload: payload });
       await api.refresh('grid-save');
+      if (root.grid && root.grid.clearPreview) root.grid.clearPreview();
       root.access.toast('Grid calibration saved', 'saved');
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');
@@ -477,10 +500,7 @@
     var confirmed = await root.access.confirm('Clear Board', 'Delete all tokens from the active map?', 'Clear Board');
     if (!confirmed) return;
     try {
-      var secret = await root.access.requireDmSecret();
-      for (var i = 0; i < tokens.length; i += 1) {
-        await api.rpc('world_delete_token', { p_secret: secret, p_token_id: tokens[i].id });
-      }
+      await privileged('world_clear_board', { p_map_id: api.store.world.active_map_id });
       await api.refresh('clear-board');
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');
@@ -563,6 +583,10 @@
     });
     drawer.addEventListener('change', function(evt){
       if (evt.target.matches('[data-default-character]')) assignDefault(evt.target);
+    });
+    drawer.addEventListener('input', function(evt){
+      var form = evt.target.closest('#worldGridForm');
+      if (form) previewGrid(form);
     });
     // Apply any state update that arrived while the DM was typing.
     drawer.addEventListener('focusout', function(){

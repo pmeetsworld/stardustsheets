@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260704b';
+  var BUILD = window.AEGIS_BUILD || '20260705a';
   var PLAYER_KEY = 'aegis-world-player-v1';
   var DM_KEY = 'aegis-world-dm-secret-v1';
   var ACCESS_MS = 12 * 60 * 60 * 1000;
@@ -12,6 +12,8 @@
   var localMode = null;
   var lastServerModeRev = -1;
   var toastTimer = null;
+  var transitionSince = 0;
+  var transitionTimer = null;
   var pendingDmResolve = null;
   var pendingConfirmResolve = null;
 
@@ -379,7 +381,24 @@
       lock.setAttribute('aria-pressed', state.world.movement_locked ? 'true' : 'false');
     }
     var transition = document.getElementById('worldTransition');
-    if (transition) transition.hidden = !state.world.scene_changing;
+    if (transition) {
+      // Watchdog: if the DM's client dies between transition start and
+      // finish, scene_changing stays true forever. Hide the overlay locally
+      // after 20 s so players are never stuck on "Scene Changing".
+      if (state.world.scene_changing) {
+        if (!transitionSince) {
+          transitionSince = Date.now();
+          clearTimeout(transitionTimer);
+          transitionTimer = setTimeout(function(){ renderShell(api.store); }, 21000);
+        }
+        transition.hidden = (Date.now() - transitionSince) > 20000;
+      } else {
+        transitionSince = 0;
+        clearTimeout(transitionTimer);
+        transitionTimer = null;
+        transition.hidden = true;
+      }
+    }
   }
 
   function wireDialogs(){

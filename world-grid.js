@@ -4,9 +4,14 @@
   var root = window.AEGIS_WORLD = window.AEGIS_WORLD || {};
   var api = root.api;
   var svg = null;
+  var preview = null;   // uncommitted DM calibration values, local-only
 
   function map(){
-    return api.activeMap();
+    var row = api.activeMap();
+    if (row && preview && preview.id === row.id) {
+      return Object.assign({}, row, preview.values);
+    }
+    return row;
   }
 
   function effectiveCell(mapRow){
@@ -82,6 +87,15 @@
     render: render,
     snap: snap,
     distance: distance,
+    setPreview: function(id, values){
+      preview = id ? { id: id, values: values || {} } : null;
+      render();
+    },
+    clearPreview: function(){
+      if (!preview) return;
+      preview = null;
+      render();
+    },
     cell: function(){ return effectiveCell(map()); }
   };
 })();

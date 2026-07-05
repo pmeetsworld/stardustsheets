@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - Campaign Roster</title>
 <script>
 (function(){
-  var build = '20260704b';
+  var build = '20260705a';
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
   }
@@ -27,7 +27,7 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260704b">
+<link rel="stylesheet" href="styles.css?v=20260705a">
 <style>
 body{ padding:54px 16px; min-height:100vh; }
 .roster-shell{
@@ -43,7 +43,7 @@ body{ padding:54px 16px; min-height:100vh; }
 .roster-card{
   display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:12px;
   text-decoration:none; color:var(--label); background:linear-gradient(180deg,#24282c,var(--bg-2));
-  border:1px solid var(--frame); border-radius:var(--r); padding:12px;
+  border:1px solid var(--frame); border-left:3px solid var(--ice); border-radius:var(--r); padding:12px;
   box-shadow:var(--shadow-panel);
   transition:border-color var(--dur), transform var(--dur), background var(--dur);
 }
@@ -66,7 +66,7 @@ body{ padding:54px 16px; min-height:100vh; }
 .roster-dm{
   display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; justify-content:space-between; gap:12px;
   text-decoration:none; color:var(--label); background:linear-gradient(180deg,#2a2d31,#1f2226);
-  border:1px solid rgba(255,90,60,.55); border-radius:var(--r); padding:12px;
+  border:1px solid rgba(255,90,60,.55); border-left:3px solid var(--red); border-radius:var(--r); padding:12px;
   box-shadow:var(--shadow-panel);
   transition:border-color var(--dur), transform var(--dur), background var(--dur);
 }
@@ -88,11 +88,11 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
 </head>
 <body>
   <div class="toolbar app-toolbar campaign-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260704b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260705a" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Campaign Roster</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="dm.html?app=20260704b">DM</a>
-    <a class="nav-btn" href="world.html?app=20260704b">World</a>
+    <a class="nav-btn" href="dm.html?app=20260705a">DM</a>
+    <a class="nav-btn" href="world.html?app=20260705a">World</a>
   </div>
   <main class="roster-shell">
     <div class="roster-head">
@@ -103,11 +103,11 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
       </div>
     </div>
     <div class="roster-actions">
-      <a class="roster-dm" href="dm.html?app=20260704b">
+      <a class="roster-dm" href="dm.html?app=20260705a">
         <span><b>DM Screen</b>Party stats / Session notes / World controls</span>
         <em>Access</em>
       </a>
-      <a class="roster-dm roster-public" href="world.html?app=20260704b">
+      <a class="roster-dm roster-public" href="world.html?app=20260705a">
         <span><b>World Viewer</b>Live battlemap / initiative / shared scenes</span>
         <em>Live</em>
       </a>
@@ -115,10 +115,10 @@ body.view-mobile-effective .roster-dm em{ flex:0 0 auto; }
     <div class="roster-grid" id="rosterGrid"></div>
     <p class="roster-foot">Open a character to view their live sheet. Use Edit with the table access code to update a sheet.</p>
   </main>
-  <script src="cloud-config.js?v=20260704b"></script>
-  <script src="view-mode.js?v=20260704b"></script>
+  <script src="cloud-config.js?v=20260705a"></script>
+  <script src="view-mode.js?v=20260705a"></script>
   <script>
-    const APP_VERSION = '20260704b';
+    const APP_VERSION = '20260705a';
     const grid = document.getElementById('rosterGrid');
     const chars = (window.AEGIS_CLOUD && window.AEGIS_CLOUD.characters) || [];
     grid.innerHTML = chars.map((c) => `

@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - DM Screen</title>
 <script>
 (function(){
-  var build = '20260704b';
+  var build = '20260705a';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -28,16 +28,16 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260704b">
-<link rel="stylesheet" href="world.css?v=20260704b">
+<link rel="stylesheet" href="styles.css?v=20260705a">
+<link rel="stylesheet" href="world.css?v=20260705a">
 </head>
 <body class="dm-screen-body" data-world-role="dm">
   <div class="toolbar app-toolbar dm-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260704b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260705a" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">Dungeon Master Screen</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260704b">Roster</a>
-    <a class="nav-btn" href="world.html?app=20260704b">World</a>
+    <a class="nav-btn" href="campaign.html?app=20260705a">Roster</a>
+    <a class="nav-btn" href="world.html?app=20260705a">World</a>
     <span class="hint" id="dmCloudStatus">Locked</span>
   </div>
 
@@ -162,17 +162,17 @@
     </section>
   </main>
 
-  <script src="cloud-config.js?v=20260704b"></script>
-  <script src="view-mode.js?v=20260704b"></script>
-  <script src="field-map.js?v=20260704b"></script>
-  <script src="world-realtime.js?v=20260704b"></script>
-  <script src="world-board.js?v=20260704b"></script>
-  <script src="world-grid.js?v=20260704b"></script>
-  <script src="world-tokens.js?v=20260704b"></script>
-  <script src="world-templates.js?v=20260704b"></script>
-  <script src="world-turns.js?v=20260704b"></script>
-  <script src="world-assets.js?v=20260704b"></script>
-  <script src="world.js?v=20260704b"></script>
-  <script src="dm.js?v=20260704b"></script>
+  <script src="cloud-config.js?v=20260705a"></script>
+  <script src="view-mode.js?v=20260705a"></script>
+  <script src="field-map.js?v=20260705a"></script>
+  <script src="world-realtime.js?v=20260705a"></script>
+  <script src="world-board.js?v=20260705a"></script>
+  <script src="world-grid.js?v=20260705a"></script>
+  <script src="world-tokens.js?v=20260705a"></script>
+  <script src="world-templates.js?v=20260705a"></script>
+  <script src="world-turns.js?v=20260705a"></script>
+  <script src="world-assets.js?v=20260705a"></script>
+  <script src="world.js?v=20260705a"></script>
+  <script src="dm.js?v=20260705a"></script>
 </body>
 </html>

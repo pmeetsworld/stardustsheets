@@ -1176,6 +1176,54 @@ $$;
 revoke all on function public.world_delete_asset(text, uuid) from public;
 grant execute on function public.world_delete_asset(text, uuid) to anon, authenticated;
 
+create or replace function public.world_clear_board(
+  p_secret text,
+  p_map_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_count integer;
+begin
+  if not private.world_admin_valid(p_secret) then
+    return jsonb_build_object('ok', false, 'error', 'forbidden');
+  end if;
+  if p_map_id is null then
+    return jsonb_build_object('ok', false, 'error', 'missing_map');
+  end if;
+
+  delete from public.world_tokens where map_id = p_map_id;
+  get diagnostics v_count = row_count;
+
+  -- Bulk destructive op: also prune deleted ids from the turn order so a
+  -- cleared board never leaves a ghost round behind.
+  update public.world_turn_state
+  set
+    order_ids = coalesce((
+      select jsonb_agg(t.value)
+      from jsonb_array_elements_text(order_ids) as t(value)
+      where exists (select 1 from public.world_tokens k where k.id::text = t.value)
+    ), '[]'::jsonb),
+    delayed_ids = coalesce((
+      select jsonb_agg(t.value)
+      from jsonb_array_elements_text(delayed_ids) as t(value)
+      where exists (select 1 from public.world_tokens k where k.id::text = t.value)
+    ), '[]'::jsonb),
+    active_index = 0,
+    rev = rev + 1,
+    updated_at = now()
+  where id = 'main';
+
+  return jsonb_build_object('ok', true, 'removed', v_count);
+end;
+$$;
+
+revoke all on function public.world_clear_board(text, uuid) from public;
+grant execute on function public.world_clear_board(text, uuid) to anon, authenticated;
+
 do $$
 declare
   v_table text;
