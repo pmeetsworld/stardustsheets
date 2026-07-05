@@ -528,6 +528,7 @@ body.world-body{
   gap:4px;
   margin-top:5px;
 }
+.world-player-dock-actions{ grid-template-columns:1fr; }
 .world-dock-actions button,
 .world-rail-heading button{
   min-height:27px;
@@ -1356,7 +1357,6 @@ body.world-body{
 @media(min-width:821px){
   body.view-desktop.world-body,
   body.view-auto.world-body{ min-width:0; }
-  .world-app[data-role="player"] .world-turn-dock{ display:none; }
 }
 
 @media(prefers-reduced-motion:reduce){

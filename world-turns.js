@@ -149,7 +149,18 @@
   function renderDock(){
     if (!dock) return;
     if (role !== 'dm') {
-      dock.innerHTML = '';
+      var active = api.activeToken();
+      if (!active || !api.store.turn.combat_active) {
+        dock.innerHTML = '';
+        return;
+      }
+      var data = publicData(active);
+      var player = root.access.playerSession();
+      var isOwner = player && active.owner_slug === player.slug;
+      dock.innerHTML = [
+        '<div class="world-dock-title"><span>' + (isOwner ? 'Your Turn' : 'Now Acting') + '</span><b>' + utils.escapeHtml(data.name) + '</b></div>',
+        isOwner ? '<div class="world-dock-actions world-player-dock-actions"><button type="button" class="primary world-end-turn" data-turn-action="end_turn">End Turn</button></div>' : ''
+      ].join('');
       return;
     }
     dock.innerHTML = [
