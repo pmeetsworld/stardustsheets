@@ -11,6 +11,7 @@
   var partyPanel = null;
   var partyDrawer = null;
   var mobileTurn = null;
+  var listPending = false;
 
   function activeMapTokens(){
     var mapId = api.store.world.active_map_id;
@@ -193,16 +194,29 @@
     ].join('');
   }
 
+  function listHasFocus(){
+    var active = document.activeElement;
+    return !!(active && list && list.contains(active) &&
+      active.matches('input, textarea, select'));
+  }
+
   function render(){
     if (!list) return;
     var rows = orderedTokens();
-    list.innerHTML = rows.length ? rows.map(initiativeRow).join('') :
-      '<p class="world-empty-copy">Deploy tokens to establish an initiative order.</p>';
     var party = rows.filter(function(token){ return token.kind === 'pc'; }).map(partyCard).join('');
     if (partyPanel) partyPanel.innerHTML = party || '<p class="world-empty-copy">No party tokens deployed.</p>';
     if (partyDrawer) partyDrawer.innerHTML = party || '<p class="world-empty-copy">No public party data available.</p>';
     renderDock();
     renderMobileTurn();
+    // Never rebuild the initiative list while the DM is typing an
+    // initiative value; retry after the input blurs.
+    if (listHasFocus()) {
+      listPending = true;
+      return;
+    }
+    listPending = false;
+    list.innerHTML = rows.length ? rows.map(initiativeRow).join('') :
+      '<p class="world-empty-copy">Deploy tokens to establish an initiative order.</p>';
   }
 
   async function turnAction(action, targetId){
@@ -319,6 +333,11 @@
     });
     host.addEventListener('change', function(evt){
       if (evt.target.matches('[data-init-token]')) updateInitiative(evt.target);
+    });
+    list.addEventListener('focusout', function(){
+      setTimeout(function(){
+        if (listPending && !listHasFocus()) render();
+      }, 120);
     });
   }
 

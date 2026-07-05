@@ -5,6 +5,15 @@ create extension if not exists pgcrypto with schema extensions;
 create schema if not exists private;
 revoke all on schema private from public;
 
+-- Character roster visibility flag consumed by the World Viewer
+-- (world_add_party and the public characters feed filter on it). This file
+-- previously referenced the column without creating it, which broke fresh
+-- reproductions of the schema. Additive and idempotent; existing values are
+-- never overwritten. New columns default to false: flag each roster PC true
+-- (see codex-verify.sql) or the party will silently never appear.
+alter table public.characters
+  add column if not exists is_public boolean not null default false;
+
 create table if not exists private.world_admin (
   id text primary key default 'main',
   dm_secret text not null,

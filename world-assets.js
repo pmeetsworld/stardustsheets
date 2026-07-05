@@ -10,6 +10,8 @@
   var drawer = null;
   var uploadClient = null;
   var updateTimer = null;
+  var renderPending = false;
+  var lastSignature = '';
 
   function option(value, label, selected){
     return '<option value="' + utils.escapeHtml(value || '') + '"' + (selected ? ' selected' : '') + '>' + utils.escapeHtml(label) + '</option>';
@@ -35,8 +37,58 @@
     return api.store.world.active_map_id || (select && select.value) || '';
   }
 
-  function render(){
+  function drawerHasFocus(){
+    var active = document.activeElement;
+    return !!(active && drawer && drawer.contains(active) &&
+      active.matches('input, textarea, select, [contenteditable="true"]'));
+  }
+
+  // Only the data the drawer actually displays. Token x/y/rev are excluded
+  // on purpose so routine token moves do not rebuild the form.
+  function renderSignature(){
+    var world = api.store.world;
+    var mapRow = activeMap();
+    return JSON.stringify([
+      world.active_map_id,
+      world.active_scene_asset_id,
+      mapRow && [
+        mapRow.id, mapRow.title, mapRow.cell_px, mapRow.offset_x, mapRow.offset_y,
+        mapRow.grid_scale, mapRow.grid_opacity, mapRow.grid_color, mapRow.grid_visible,
+        mapRow.snap_enabled, mapRow.diagonal_rule, mapRow.feet_per_cell
+      ],
+      api.store.maps.map(function(map){ return [map.id, map.title, map.asset_id]; }),
+      api.store.assets.map(function(asset){
+        return [asset.id, asset.kind, asset.name, asset.natural_w, asset.natural_h, asset.bytes];
+      }),
+      api.store.tokens.filter(function(token){ return token.map_id === world.active_map_id; })
+        .map(function(token){
+          return [
+            token.id, token.name, token.kind, token.size, token.staged,
+            token.init_mod, token.armor_class, token.current_hp, token.max_hp,
+            token.conditions, token.notes, token.art_asset_id
+          ];
+        }),
+      api.store.templates.filter(function(template){ return template.map_id === world.active_map_id; })
+        .map(function(template){ return [template.id, template.shape, template.pinned, template.owner_slug]; })
+    ]);
+  }
+
+  function render(force){
     if (!drawer || role !== 'dm') return;
+    var signature = renderSignature();
+    // Skip rebuilds when nothing the drawer shows has changed (poll echoes).
+    if (!force && signature === lastSignature) return;
+    // Never rebuild the form while the DM is typing in it; retry on blur.
+    if (drawerHasFocus()) {
+      renderPending = true;
+      return;
+    }
+    lastSignature = signature;
+    renderPending = false;
+    renderDrawer();
+  }
+
+  function renderDrawer(){
     var mapRow = activeMap();
     var mapAssets = api.store.maps.map(function(map){
       var asset = api.store.assets.find(function(item){ return item.id === map.asset_id; });
@@ -50,6 +102,12 @@
     var templates = api.store.templates.filter(function(template){
       return template.map_id === api.store.world.active_map_id;
     });
+    // Preserve open token editors and scroll position across rebuilds.
+    var openTokens = {};
+    drawer.querySelectorAll('[data-edit-token]').forEach(function(details){
+      if (details.open) openTokens[details.getAttribute('data-edit-token')] = true;
+    });
+    var scrollTop = drawer.scrollTop;
 
     drawer.innerHTML = [
       '<div class="world-dm-drawer-head"><span>World Controls</span><button type="button" data-world-drawer-close aria-label="Close">×</button></div>',
@@ -157,6 +215,11 @@
         '</div>',
       '</section>'
     ].join('');
+
+    drawer.querySelectorAll('[data-edit-token]').forEach(function(details){
+      if (openTokens[details.getAttribute('data-edit-token')]) details.open = true;
+    });
+    drawer.scrollTop = scrollTop;
   }
 
   async function privileged(name, payload){
@@ -500,6 +563,12 @@
     });
     drawer.addEventListener('change', function(evt){
       if (evt.target.matches('[data-default-character]')) assignDefault(evt.target);
+    });
+    // Apply any state update that arrived while the DM was typing.
+    drawer.addEventListener('focusout', function(){
+      setTimeout(function(){
+        if (renderPending && !drawerHasFocus()) render();
+      }, 120);
     });
   }
 

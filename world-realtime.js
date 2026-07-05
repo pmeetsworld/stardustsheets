@@ -46,6 +46,24 @@
     characters: []
   };
 
+  // --- Interaction guard (mirrors cloud-save.js canApplyIncoming pattern) ---
+  // Modules register short-lived guards (e.g. an in-progress token drag).
+  // While any guard is active, store refreshes are deferred so incoming
+  // state cannot tear down DOM the user is interacting with.
+  var interactionGuards = [];
+  var lastTokenRevs = {};
+
+  function registerGuard(fn){
+    if (typeof fn === 'function') interactionGuards.push(fn);
+  }
+
+  function isInteracting(){
+    for (var i = 0; i < interactionGuards.length; i += 1) {
+      try { if (interactionGuards[i]()) return true; } catch (err) {}
+    }
+    return false;
+  }
+
   function hasConfig(){
     return !!(config.supabaseUrl && config.supabaseKey);
   }
@@ -135,6 +153,47 @@
     }));
   }
 
+  // --- Stale/self-echo protection via per-row rev tracking ---
+
+  function mergeTokens(fetched){
+    var previous = {};
+    store.tokens.forEach(function(token){ previous[token.id] = token; });
+    var keep = {};
+    var merged = fetched.map(function(token){
+      var rev = parseInt(token.rev, 10) || 0;
+      var known = lastTokenRevs[token.id] || 0;
+      keep[token.id] = true;
+      // A refetch that raced our own PATCH can return an older row; keep the
+      // newer local copy instead of snapping the token back.
+      if (rev < known && previous[token.id]) return previous[token.id];
+      lastTokenRevs[token.id] = Math.max(known, rev);
+      return token;
+    });
+    Object.keys(lastTokenRevs).forEach(function(id){
+      if (!keep[id]) delete lastTokenRevs[id];
+    });
+    return merged;
+  }
+
+  // Applies a single authoritative token row (e.g. the PATCH response of a
+  // move) without a full eight-table refetch.
+  function applyTokenRow(row){
+    if (!row || !row.id) return;
+    var rev = parseInt(row.rev, 10) || 0;
+    if (rev < (lastTokenRevs[row.id] || 0)) return;
+    lastTokenRevs[row.id] = rev;
+    var found = false;
+    for (var i = 0; i < store.tokens.length; i += 1) {
+      if (store.tokens[i].id === row.id) {
+        store.tokens[i] = row;
+        found = true;
+        break;
+      }
+    }
+    if (!found) store.tokens.push(row);
+    emit('token-row');
+  }
+
   function setConnection(connected, error){
     store.connected = !!connected;
     store.error = error ? String(error.message || error) : '';
@@ -143,6 +202,15 @@
 
   async function refresh(reason){
     if (refreshPromise) return refreshPromise;
+    // Defer (never drop) refreshes while the user is mid-interaction.
+    if (store.ready && isInteracting()) {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(function(){
+        refreshTimer = null;
+        refresh(reason).catch(function(){});
+      }, 600);
+      return Promise.resolve(store);
+    }
     store.loading = !store.ready;
     emit('loading');
     refreshPromise = Promise.all([
@@ -155,11 +223,14 @@
       request('character_token_defaults?select=*'),
       request('characters?select=slug,name,player_name,sheet_data,updated_at&is_public=eq.true')
     ]).then(function(results){
-      store.world = normalizeWorld(results[0] && results[0][0]);
-      store.turn = normalizeTurn(results[1] && results[1][0]);
+      // Never regress a singleton row to an older rev (stale echo/race).
+      var world = normalizeWorld(results[0] && results[0][0]);
+      if (!store.ready || world.rev >= store.world.rev) store.world = world;
+      var turn = normalizeTurn(results[1] && results[1][0]);
+      if (!store.ready || turn.rev >= store.turn.rev) store.turn = turn;
       store.assets = normalizeArray(results[2]);
       store.maps = normalizeArray(results[3]);
-      store.tokens = normalizeArray(results[4]);
+      store.tokens = mergeTokens(normalizeArray(results[4]));
       store.templates = normalizeArray(results[5]);
       store.defaults = normalizeArray(results[6]);
       store.characters = normalizeArray(results[7]);
@@ -318,6 +389,9 @@
       await refresh('move-conflict');
       throw new Error('Token moved elsewhere. The board has been refreshed.');
     }
+    // Apply the confirmed row locally so the mover sees the final position
+    // immediately and later echoes of older revs are ignored.
+    applyTokenRow(rows[0]);
     return rows[0];
   }
 
@@ -394,6 +468,9 @@
     token: token,
     activeToken: activeToken,
     moveToken: moveToken,
+    applyTokenRow: applyTokenRow,
+    registerGuard: registerGuard,
+    isInteracting: isInteracting,
     insertTemplate: insertTemplate,
     updateTemplate: updateTemplate,
     deleteTemplate: deleteTemplate,

@@ -86,49 +86,101 @@
     );
   }
 
+  function buildToken(token){
+    var element = document.createElement('button');
+    element.type = 'button';
+    element.className = 'world-token';
+    element.setAttribute('data-token-id', token.id);
+    var label = document.createElement('span');
+    label.className = 'world-token-label';
+    var face = document.createElement('span');
+    face.className = 'world-token-face';
+    var count = document.createElement('span');
+    count.className = 'world-stack-count';
+    count.hidden = true;
+    element.appendChild(label);
+    element.appendChild(face);
+    element.appendChild(count);
+    return element;
+  }
+
+  function updateToken(element, token, grouped, actingId){
+    var diameter = tokenDiameter(token);
+    var key = stackKey(token);
+    var group = grouped[key] || [];
+    var index = group.indexOf(token);
+    var dragging = !!(drag && drag.id === token.id);
+    var fan = '';
+    if (fannedKey === key && group.length > 1) {
+      var angle = (-70 + (140 / Math.max(1, group.length - 1)) * index) * Math.PI / 180;
+      var distance = Math.min(diameter * 0.7, 42);
+      fan = 'translate(' + (Math.cos(angle) * distance) + 'px,' + (Math.sin(angle) * distance) + 'px)';
+    }
+    element.setAttribute('data-stack-key', key);
+    element.setAttribute('aria-label', token.name || 'Token');
+    element.style.width = diameter + 'px';
+    element.style.height = diameter + 'px';
+    element.style.setProperty('--fan', fan || 'none');
+    // Never touch position or lift state of the token being dragged: the
+    // drag preview owns left/top until the move commits on release.
+    if (!dragging) {
+      element.style.left = Number(token.x || 0) + 'px';
+      element.style.top = Number(token.y || 0) + 'px';
+      var classNames = ['world-token', 'is-' + token.kind];
+      if (token.id === selectedId) classNames.push('selected');
+      if (actingId && actingId === token.id) classNames.push('acting');
+      if (canMove(token)) classNames.push('movable');
+      if (token.defeated) classNames.push('defeated');
+      if (fannedKey === key) classNames.push('fanned');
+      element.className = classNames.join(' ');
+    }
+    element.querySelector('.world-token-label').textContent = token.name || 'Combatant';
+    var face = element.querySelector('.world-token-face');
+    var art = tokenArt(token);
+    if (art) {
+      var imageValue = 'url("' + String(art).replace(/"/g, '%22') + '")';
+      if (face.style.backgroundImage !== imageValue) face.style.backgroundImage = imageValue;
+      if (face.textContent) face.textContent = '';
+    } else {
+      if (face.style.backgroundImage) face.style.backgroundImage = '';
+      face.textContent = initials(token.name);
+    }
+    var count = element.querySelector('.world-stack-count');
+    var showCount = group.length > 1 && index === group.length - 1;
+    count.hidden = !showCount;
+    count.textContent = showCount ? '×' + group.length : '';
+  }
+
   function render(){
     if (!layer || !root.board || root.access.mode() !== 'encounter') {
-      if (layer) layer.innerHTML = '';
+      if (layer) layer.textContent = '';
       renderStaging();
       return;
     }
     var tokens = activeMapTokens(false);
     var grouped = stacks(tokens);
-    layer.innerHTML = tokens.map(function(token){
-      var diameter = tokenDiameter(token);
-      var key = stackKey(token);
-      var group = grouped[key] || [];
-      var index = group.indexOf(token);
-      var fan = '';
-      if (fannedKey === key && group.length > 1) {
-        var angle = (-70 + (140 / Math.max(1, group.length - 1)) * index) * Math.PI / 180;
-        var distance = Math.min(diameter * 0.7, 42);
-        fan = 'translate(' + (Math.cos(angle) * distance) + 'px,' + (Math.sin(angle) * distance) + 'px)';
+    var acting = api.activeToken();
+    var actingId = acting ? acting.id : '';
+    // Patch in place instead of innerHTML teardown so live syncs cannot
+    // destroy a token mid-drag or snap a just-moved token backwards.
+    var existing = {};
+    Array.prototype.slice.call(layer.children).forEach(function(child){
+      var id = child.getAttribute && child.getAttribute('data-token-id');
+      if (id) existing[id] = child;
+    });
+    var seen = {};
+    tokens.forEach(function(token){
+      seen[token.id] = true;
+      var element = existing[token.id];
+      if (!element) {
+        element = buildToken(token);
+        layer.appendChild(element);
       }
-      var art = tokenArt(token);
-      var classNames = [
-        'world-token',
-        'is-' + token.kind,
-        token.id === selectedId ? 'selected' : '',
-        api.activeToken() && api.activeToken().id === token.id ? 'acting' : '',
-        canMove(token) ? 'movable' : '',
-        token.defeated ? 'defeated' : '',
-        fannedKey === key ? 'fanned' : ''
-      ].filter(Boolean).join(' ');
-      return [
-        '<button type="button" class="' + classNames + '"',
-          ' data-token-id="' + utils.escapeHtml(token.id) + '"',
-          ' data-stack-key="' + key + '"',
-          ' style="left:' + Number(token.x || 0) + 'px;top:' + Number(token.y || 0) + 'px;width:' + diameter + 'px;height:' + diameter + 'px;--fan:' + fan + '"',
-          ' aria-label="' + utils.escapeHtml(token.name || 'Token') + '">',
-          '<span class="world-token-label">' + utils.escapeHtml(token.name || 'Combatant') + '</span>',
-          '<span class="world-token-face"' + (art ? ' style="background-image:url(\'' + String(art).replace(/'/g, '%27') + '\')"' : '') + '>',
-            art ? '' : utils.escapeHtml(initials(token.name)),
-          '</span>',
-          group.length > 1 && index === group.length - 1 ? '<span class="world-stack-count">×' + group.length + '</span>' : '',
-        '</button>'
-      ].join('');
-    }).join('');
+      updateToken(element, token, grouped, actingId);
+    });
+    Object.keys(existing).forEach(function(id){
+      if (!seen[id]) existing[id].remove();
+    });
     renderStaging();
   }
 
@@ -211,9 +263,12 @@
     if (!current.lifted || !current.preview) return;
     var point = root.grid.snap(current.preview);
     point = root.board.clampPoint(point, tokenDiameter(current.token) / 2);
+    // Use the freshest row from the store for the rev compare-and-swap; the
+    // captured drag row may be stale if a sync arrived during the drag.
+    var latest = tokenRow(current.id) || current.token;
     try {
-      await api.moveToken(current.token, point.x, point.y);
-      await api.refresh('token-move');
+      await api.moveToken(latest, point.x, point.y);
+      // moveToken applies the confirmed row locally; no full refetch needed.
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');
       render();
@@ -282,6 +337,8 @@
     staging = document.getElementById('worldStaging');
     if (!layer) return;
     wire();
+    // Defer store refreshes while a drag is in progress.
+    if (api.registerGuard) api.registerGuard(function(){ return !!drag; });
     document.addEventListener('aegis:world-state', render);
     document.addEventListener('aegis:board-ready', render);
     document.addEventListener('aegis:world-identity', render);

@@ -13,8 +13,12 @@
   var currentAssetId = '';
   var naturalWidth = 0;
   var naturalHeight = 0;
+  var MIN_SCALE = 0.05;
+  var MAX_SCALE = 8;
   var camera = { x: 0, y: 0, scale: 1 };
   var fitted = false;
+  var userAdjusted = false;   // true once the user pans/zooms manually
+  var cameraAssetId = '';     // asset the camera was last initialized for
   var pointers = {};
   var panStart = null;
   var pinchStart = null;
@@ -39,7 +43,7 @@
         camera = {
           x: Number(value.x),
           y: Number(value.y),
-          scale: Math.max(0.05, Math.min(8, Number(value.scale)))
+          scale: Math.max(MIN_SCALE, Math.min(MAX_SCALE, Number(value.scale)))
         };
         return true;
       }
@@ -62,21 +66,25 @@
       Math.max(0.05, (rect.width - pad * 2) / naturalWidth),
       Math.max(0.05, (rect.height - pad * 2) / naturalHeight)
     );
-    camera.scale = Math.max(0.05, Math.min(4, scale));
+    // Single scale clamp for the whole board (was max 4 here vs 8 in
+    // zoomAt/restoreCamera, which made "fit" fight manual zoom).
+    camera.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
     camera.x = (rect.width - naturalWidth * camera.scale) / 2;
     camera.y = (rect.height - naturalHeight * camera.scale) / 2;
     fitted = true;
+    userAdjusted = false;
     applyCamera();
   }
 
   function zoomAt(nextScale, clientX, clientY){
     if (!viewport || !naturalWidth) return;
+    userAdjusted = true;
     var rect = viewport.getBoundingClientRect();
     var pointX = (clientX == null ? rect.left + rect.width / 2 : clientX) - rect.left;
     var pointY = (clientY == null ? rect.top + rect.height / 2 : clientY) - rect.top;
     var mapX = (pointX - camera.x) / camera.scale;
     var mapY = (pointY - camera.y) / camera.scale;
-    nextScale = Math.max(0.05, Math.min(8, nextScale));
+    nextScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, nextScale));
     camera.x = pointX - mapX * nextScale;
     camera.y = pointY - mapY * nextScale;
     camera.scale = nextScale;
@@ -125,9 +133,24 @@
 
   function imageLoaded(image, asset){
     if (!asset || currentAssetId !== asset.id) return;
-    setDimensions(asset.natural_w || image.naturalWidth, asset.natural_h || image.naturalHeight);
-    if (!restoreCamera()) fit();
-    else applyCamera();
+    var width = asset.natural_w || image.naturalWidth;
+    var height = asset.natural_h || image.naturalHeight;
+    if (width !== naturalWidth || height !== naturalHeight || cameraAssetId !== asset.id) {
+      setDimensions(width, height);
+    }
+    // Initialize the camera once per asset. Realtime/poll syncs re-enter
+    // here for the same image; they must never re-apply fit/restore or they
+    // fight the user's live pan/zoom.
+    if (cameraAssetId !== asset.id) {
+      cameraAssetId = asset.id;
+      if (restoreCamera()) {
+        fitted = true;
+        userAdjusted = true;   // a stored view is a user-chosen view
+        applyCamera();
+      } else {
+        fit();
+      }
+    }
     empty.hidden = true;
     viewport.classList.add('has-image');
   }
@@ -212,6 +235,7 @@
       return;
     }
     if (panStart && ids.length === 1) {
+      userAdjusted = true;
       camera.x = panStart.cameraX + evt.clientX - panStart.pointerX;
       camera.y = panStart.cameraY + evt.clientY - panStart.pointerY;
       applyCamera();
@@ -251,19 +275,18 @@
       }
     });
 
+    // Resizes (including the mobile URL bar showing/hiding) only refit when
+    // the user has not chosen their own pan/zoom; a manual view is preserved.
     window.addEventListener('resize', function(){
-      if (!fitted) return;
-      var previous = Object.assign({}, camera);
+      if (!fitted || userAdjusted) return;
       fit();
-      if (previous.scale > camera.scale * 1.35) camera = previous;
-      applyCamera();
     });
     document.addEventListener('fullscreenchange', function(){
-      setTimeout(function(){ if (fitted) fit(); }, 60);
+      setTimeout(function(){ if (fitted && !userAdjusted) fit(); }, 60);
     });
     if ('ResizeObserver' in window) {
       resizeObserver = new ResizeObserver(function(){
-        if (!naturalWidth || !fitted) return;
+        if (!naturalWidth || !fitted || userAdjusted) return;
         fit();
       });
       resizeObserver.observe(viewport);

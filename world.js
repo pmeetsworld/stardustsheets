@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260701b';
+  var BUILD = window.AEGIS_BUILD || '20260704a';
   var PLAYER_KEY = 'aegis-world-player-v1';
   var DM_KEY = 'aegis-world-dm-secret-v1';
   var ACCESS_MS = 12 * 60 * 60 * 1000;
