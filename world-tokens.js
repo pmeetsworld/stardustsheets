@@ -12,6 +12,7 @@
   var fannedKey = '';
   var drag = null;
   var longPressTimer = null;
+  var dragFailsafe = null;
 
   function activeMapTokens(includeStaged){
     var mapId = api.store.world.active_map_id;
@@ -225,6 +226,8 @@
       offsetY: point.y - Number(token.y || 0),
       lifted: evt.pointerType !== 'touch'
     };
+    clearTimeout(dragFailsafe);
+    dragFailsafe = setTimeout(cancelDrag, 30000);
     if (evt.pointerType === 'touch') {
       longPressTimer = setTimeout(function(){
         if (!drag) return;
@@ -236,6 +239,25 @@
       element.classList.add('lifted');
     }
     element.setPointerCapture(evt.pointerId);
+  }
+
+  function clearDragState(current, pointerId){
+    clearTimeout(longPressTimer);
+    clearTimeout(dragFailsafe);
+    dragFailsafe = null;
+    if (!current || !current.element) return;
+    current.element.classList.remove('lifted');
+    if (current.element.hasPointerCapture && current.element.hasPointerCapture(pointerId)) {
+      current.element.releasePointerCapture(pointerId);
+    }
+  }
+
+  function cancelDrag(){
+    if (!drag) return;
+    var current = drag;
+    drag = null;
+    clearDragState(current, current.pointerId);
+    render();
   }
 
   function moveDrag(evt){
@@ -257,13 +279,9 @@
 
   async function endDrag(evt){
     if (!drag || drag.pointerId !== evt.pointerId) return;
-    clearTimeout(longPressTimer);
     var current = drag;
     drag = null;
-    current.element.classList.remove('lifted');
-    if (current.element.hasPointerCapture && current.element.hasPointerCapture(evt.pointerId)) {
-      current.element.releasePointerCapture(evt.pointerId);
-    }
+    clearDragState(current, evt.pointerId);
     if (!current.lifted || !current.preview) return;
     var point = root.grid.snap(current.preview);
     point = root.board.clampPoint(point, tokenDiameter(current.token) / 2);
@@ -324,7 +342,10 @@
     });
     layer.addEventListener('pointermove', moveDrag);
     layer.addEventListener('pointerup', endDrag);
-    layer.addEventListener('pointercancel', endDrag);
+    layer.addEventListener('pointercancel', cancelDrag);
+    document.addEventListener('pointerup', endDrag);
+    document.addEventListener('pointercancel', cancelDrag);
+    window.addEventListener('blur', cancelDrag);
     if (staging) {
       staging.addEventListener('click', function(evt){
         var button = evt.target.closest('[data-staging-action]');

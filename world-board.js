@@ -19,14 +19,19 @@
   var fitted = false;
   var userAdjusted = false;   // true once the user pans/zooms manually
   var cameraAssetId = '';     // asset the camera was last initialized for
+  var cameraViewKey = '';     // effective mobile/desktop view for camera restore
   var pointers = {};
   var panStart = null;
   var pinchStart = null;
   var saveTimer = null;
   var resizeObserver = null;
 
+  function viewKey(){
+    return document.body && document.body.classList.contains('view-mobile-effective') ? 'mobile' : 'desktop';
+  }
+
   function cameraKey(){
-    return 'aegis-world-view-v1:' + (currentAssetId || 'none');
+    return 'aegis-world-view-v2:' + viewKey() + ':' + (currentAssetId || 'none');
   }
 
   function saveCamera(){
@@ -135,14 +140,17 @@
     if (!asset || currentAssetId !== asset.id) return;
     var width = asset.natural_w || image.naturalWidth;
     var height = asset.natural_h || image.naturalHeight;
-    if (width !== naturalWidth || height !== naturalHeight || cameraAssetId !== asset.id) {
+    var nextViewKey = viewKey();
+    var cameraContextChanged = cameraAssetId !== asset.id || cameraViewKey !== nextViewKey;
+    if (width !== naturalWidth || height !== naturalHeight || cameraContextChanged) {
       setDimensions(width, height);
     }
     // Initialize the camera once per asset. Realtime/poll syncs re-enter
     // here for the same image; they must never re-apply fit/restore or they
     // fight the user's live pan/zoom.
-    if (cameraAssetId !== asset.id) {
+    if (cameraContextChanged) {
       cameraAssetId = asset.id;
+      cameraViewKey = nextViewKey;
       if (restoreCamera()) {
         fitted = true;
         userAdjusted = true;   // a stored view is a user-chosen view
@@ -185,6 +193,7 @@
     if (nextId !== currentAssetId) {
       currentAssetId = nextId;
       fitted = false;
+      cameraViewKey = '';
       viewport.classList.remove('has-image');
       empty.hidden = !!asset;
       if (!asset) {
@@ -278,8 +287,28 @@
     // Resizes (including the mobile URL bar showing/hiding) only refit when
     // the user has not chosen their own pan/zoom; a manual view is preserved.
     window.addEventListener('resize', function(){
+      if (cameraViewKey && cameraViewKey !== viewKey()) {
+        cameraAssetId = '';
+        cameraViewKey = '';
+        fitted = false;
+        userAdjusted = false;
+        render();
+        return;
+      }
       if (!fitted || userAdjusted) return;
       fit();
+    });
+    document.addEventListener('click', function(evt){
+      if (!evt.target.closest('[data-view-choice]')) return;
+      setTimeout(function(){
+        if (cameraViewKey && cameraViewKey !== viewKey()) {
+          cameraAssetId = '';
+          cameraViewKey = '';
+          fitted = false;
+          userAdjusted = false;
+          render();
+        }
+      }, 0);
     });
     document.addEventListener('fullscreenchange', function(){
       setTimeout(function(){ if (fitted && !userAdjusted) fit(); }, 60);

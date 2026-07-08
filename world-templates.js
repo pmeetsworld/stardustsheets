@@ -47,6 +47,22 @@
     return activeTemplates().find(function(template){ return template.id === id; }) || null;
   }
 
+  function closestTemplateToPayload(payload, excludeId){
+    var candidates = activeTemplates().filter(function(template){
+      return template.id !== excludeId && template.shape === payload.shape && editable(template);
+    });
+    candidates.sort(function(a, b){
+      function distance(template){
+        return Math.abs(safeNumber(template.origin_x) - payload.origin_x) +
+          Math.abs(safeNumber(template.origin_y) - payload.origin_y) +
+          Math.abs(safeNumber(template.target_x) - payload.target_x) +
+          Math.abs(safeNumber(template.target_y) - payload.target_y);
+      }
+      return distance(a) - distance(b);
+    });
+    return candidates[0] || null;
+  }
+
   function templateWithPreview(template){
     if (!template || !editDrag || editDrag.id !== template.id || !editDrag.preview) return template;
     return Object.assign({}, template, editDrag.preview);
@@ -268,7 +284,8 @@
       payload.expires_on_token_id = null;
     }
     try {
-      await api.insertTemplate(payload);
+      var created = await api.insertTemplate(payload);
+      if (created && created.id && template.shape !== 'ping') selectedId = created.id;
       cleanupExpired();
       await api.refresh('template-create');
     } catch (err) {
@@ -321,8 +338,9 @@
     );
     try {
       var created = await api.insertTemplate(payload);
-      selectedId = created && created.id || selectedId;
       await api.refresh('template-duplicate');
+      var duplicate = created && created.id && templateById(created.id) || closestTemplateToPayload(payload, template.id);
+      selectedId = duplicate && duplicate.id || (templateById(template.id) ? template.id : '');
       render();
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');
@@ -418,7 +436,7 @@
       return;
     }
     var selected = selectedTemplateFromEvent(evt);
-    if (!tool && selected) {
+    if (selected && (!tool || selected.id === selectedId || editable(selected))) {
       beginEdit(evt, selected, 'move');
       return;
     }
