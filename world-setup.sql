@@ -1202,6 +1202,8 @@ begin
   -- cleared board never leaves a ghost round behind.
   update public.world_turn_state
   set
+    combat_active = false,
+    round = 1,
     order_ids = coalesce((
       select jsonb_agg(t.value)
       from jsonb_array_elements_text(order_ids) as t(value)
