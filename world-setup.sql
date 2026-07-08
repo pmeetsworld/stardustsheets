@@ -1219,6 +1219,8 @@ begin
     updated_at = now()
   where id = 'main';
 
+  delete from public.world_turn_snapshots;
+
   return jsonb_build_object('ok', true, 'removed', v_count);
 end;
 $$;
