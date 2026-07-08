@@ -210,7 +210,7 @@
         '<div class="world-template-admin-list">',
           templates.map(function(template){
             return '<div data-template-id="' + utils.escapeHtml(template.id) + '"><span>' + utils.escapeHtml(template.shape) + (template.owner_slug ? ' · ' + utils.escapeHtml(template.owner_slug) : '') + '</span>' +
-              '<button type="button" data-pin-template>' + (template.pinned ? 'Unpin' : 'Pin') + '</button><button type="button" data-delete-template>×</button></div>';
+              '<button type="button" data-pin-template>' + (template.pinned ? 'Unpin' : 'Pin') + '</button><button type="button" data-duplicate-template>Dupe</button><button type="button" data-delete-template>×</button></div>';
           }).join('') || '<p class="world-empty-copy">No templates on this map.</p>',
         '</div>',
       '</section>'
@@ -514,6 +514,8 @@
     try {
       if (button.matches('[data-delete-template]')) {
         await api.deleteTemplate(template.id);
+      } else if (button.matches('[data-duplicate-template]') && root.templates && root.templates.duplicate) {
+        await root.templates.duplicate(template.id);
       } else {
         await api.updateTemplate(template.id, { pinned: !template.pinned, expires_at: null });
       }
@@ -570,7 +572,7 @@
       if (save) return saveToken(save.closest('[data-edit-token]'));
       var removeToken = evt.target.closest('[data-delete-token]');
       if (removeToken) return deleteToken(removeToken.closest('[data-edit-token]'));
-      var templateButton = evt.target.closest('[data-pin-template],[data-delete-template]');
+      var templateButton = evt.target.closest('[data-pin-template],[data-duplicate-template],[data-delete-template]');
       if (templateButton) return templateAction(templateButton);
       var assetButton = evt.target.closest('[data-delete-asset]');
       if (assetButton) return deleteAsset(assetButton);

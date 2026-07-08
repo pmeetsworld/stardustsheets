@@ -51,8 +51,12 @@
     return { medium: 1, large: 2, huge: 3, gargantuan: 4 }[size] || 1;
   }
 
+  function tokenInset(){
+    return Math.min(14, Math.max(6, root.grid.cell() * 0.14));
+  }
+
   function tokenDiameter(token){
-    return Math.max(28, root.grid.cell() * sizeMultiplier(token.size));
+    return Math.max(28, root.grid.cell() * sizeMultiplier(token.size) - tokenInset());
   }
 
   function stackKey(token){

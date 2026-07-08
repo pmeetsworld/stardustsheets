@@ -198,7 +198,7 @@
 
   function beginPan(evt){
     if (evt.button != null && evt.button !== 0) return;
-    if (evt.target.closest('.world-token,.world-tool-dock,.world-fullscreen')) return;
+    if (evt.target.closest('.world-token,.world-tool-dock,.world-fullscreen,.world-template,.world-template-handle,.world-template-toolbar')) return;
     if (document.body.dataset.worldTool) return;
     pointers[evt.pointerId] = { x: evt.clientX, y: evt.clientY };
     viewport.setPointerCapture(evt.pointerId);
