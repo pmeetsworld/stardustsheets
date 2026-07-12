@@ -16,7 +16,7 @@
 <title>AEGIS SOLUTIONS - World Viewer</title>
 <script>
 (function(){
-  var build = '20260712b';
+  var build = '20260712c';
   window.AEGIS_BUILD = build;
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
     navigator.serviceWorker.register('sw.js?app=' + build, { updateViaCache: 'none' }).catch(function(){});
@@ -28,31 +28,31 @@
   location.replace(location.pathname + '?' + params.toString() + location.hash);
 })();
 </script>
-<link rel="stylesheet" href="styles.css?v=20260712b">
-<link rel="stylesheet" href="world.css?v=20260712b">
+<link rel="stylesheet" href="styles.css?v=20260712c">
+<link rel="stylesheet" href="world.css?v=20260712c">
 </head>
 <body class="world-body" data-world-role="player">
   <div class="toolbar app-toolbar world-toolbar">
-    <a class="brand brand-link" href="campaign.html?app=20260712b" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
+    <a class="brand brand-link" href="campaign.html?app=20260712c" aria-label="Open campaign roster">AEGIS <b>SOLUTIONS</b></a>
     <span class="hint">World Viewer</span>
     <span class="spacer"></span>
-    <a class="nav-btn" href="campaign.html?app=20260712b">Roster</a>
-    <a class="nav-btn" href="dm.html?app=20260712b">DM</a>
+    <a class="nav-btn" href="campaign.html?app=20260712c">Roster</a>
+    <a class="nav-btn" href="dm.html?app=20260712c">DM</a>
     <span class="hint" id="worldCloudStatus">Connecting</span>
   </div>
 
   <main id="worldRoot" class="world-host" aria-live="polite"></main>
 
-  <script src="cloud-config.js?v=20260712b"></script>
-  <script src="view-mode.js?v=20260712b"></script>
-  <script src="field-map.js?v=20260712b"></script>
-  <script src="world-realtime.js?v=20260712b"></script>
-  <script src="world-board.js?v=20260712b"></script>
-  <script src="world-grid.js?v=20260712b"></script>
-  <script src="world-tokens.js?v=20260712b"></script>
-  <script src="world-templates.js?v=20260712b"></script>
-  <script src="world-turns.js?v=20260712b"></script>
-  <script src="world-assets.js?v=20260712b"></script>
-  <script src="world.js?v=20260712b"></script>
+  <script src="cloud-config.js?v=20260712c"></script>
+  <script src="view-mode.js?v=20260712c"></script>
+  <script src="field-map.js?v=20260712c"></script>
+  <script src="world-realtime.js?v=20260712c"></script>
+  <script src="world-board.js?v=20260712c"></script>
+  <script src="world-grid.js?v=20260712c"></script>
+  <script src="world-tokens.js?v=20260712c"></script>
+  <script src="world-templates.js?v=20260712c"></script>
+  <script src="world-turns.js?v=20260712c"></script>
+  <script src="world-assets.js?v=20260712c"></script>
+  <script src="world.js?v=20260712c"></script>
 </body>
 </html>

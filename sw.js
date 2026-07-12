@@ -1,4 +1,4 @@
-const APP_BUILD = '20260712b';
+const APP_BUILD = '20260712c';
 const SHELL_CACHE = 'aegis-shell-' + APP_BUILD;
 
 const SHELL_FILES = [

@@ -156,7 +156,9 @@
                     '<label class="wide"><span>Notes</span><textarea data-token-property="notes">' + utils.escapeHtml(token.notes || '') + '</textarea></label>'
                   ].join('') : '',
                 '</div>',
-                '<div class="world-control-actions"><button type="button" data-save-token>Save</button><button type="button" data-delete-token>Delete</button></div>',
+                '<div class="world-control-actions"><button type="button" data-save-token>Save</button>' +
+                  (token.kind !== 'pc' ? '<button type="button" data-duplicate-token>Duplicate</button>' : '') +
+                  '<button type="button" data-delete-token>Delete</button></div>',
               '</details>'
             ].join('');
           }).join('') || '<p class="world-empty-copy">No tokens on the active map.</p>',
@@ -516,6 +518,35 @@
     }
   }
 
+  async function duplicateToken(details){
+    var token = api.token(details.getAttribute('data-edit-token'));
+    if (!token || token.kind === 'pc') return;
+    try {
+      await privileged('world_create_token', {
+        p_payload: {
+          map_id: token.map_id,
+          kind: token.kind,
+          name: token.name,
+          art_asset_id: token.art_asset_id,
+          size: token.size,
+          staged: true,
+          locked: token.locked,
+          init_mod: token.init_mod,
+          armor_class: token.armor_class,
+          current_hp: token.current_hp,
+          max_hp: token.max_hp,
+          temp_hp: token.temp_hp,
+          conditions: token.conditions,
+          notes: token.notes
+        }
+      });
+      await api.refresh('token-duplicate');
+      root.access.toast(token.name + ' duplicated to staging', 'saved');
+    } catch (err) {
+      root.access.toast(err.message || String(err), 'error');
+    }
+  }
+
   async function clearBoard(){
     var tokens = api.store.tokens.filter(function(token){ return token.map_id === api.store.world.active_map_id; });
     if (!tokens.length) return;
@@ -592,6 +623,8 @@
       if (evt.target.closest('[data-world-admin="clear-board"]')) return clearBoard();
       var save = evt.target.closest('[data-save-token]');
       if (save) return saveToken(save.closest('[data-edit-token]'));
+      var duplicate = evt.target.closest('[data-duplicate-token]');
+      if (duplicate) return duplicateToken(duplicate.closest('[data-edit-token]'));
       var removeToken = evt.target.closest('[data-delete-token]');
       if (removeToken) return deleteToken(removeToken.closest('[data-edit-token]'));
       var templateButton = evt.target.closest('[data-pin-template],[data-duplicate-template],[data-delete-template]');

@@ -3,7 +3,11 @@
 
   var config = window.AEGIS_CLOUD || {};
   var params = new URLSearchParams(window.location.search);
-  var slug = params.get('slug') || '';
+  var requestedSlug = params.get('slug') || '';
+  var slugAliases = {
+    bubaranatak: 'bubranatak'
+  };
+  var slug = slugAliases[requestedSlug] || requestedSlug;
   var editKey = params.get('edit') || '';
   var legacyEditLink = !!editKey;
   var isEdit = !!editKey;

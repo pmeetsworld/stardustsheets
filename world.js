@@ -1,7 +1,7 @@
 (function(){
   'use strict';
 
-  var BUILD = window.AEGIS_BUILD || '20260712b';
+  var BUILD = window.AEGIS_BUILD || '20260712c';
   var PLAYER_KEY = 'aegis-world-player-v1';
   var DM_KEY = 'aegis-world-dm-secret-v1';
   var ACCESS_MS = 12 * 60 * 60 * 1000;
@@ -293,21 +293,21 @@
 
       '<dialog class="world-dialog" id="worldIdentityDialog">',
         '<form method="dialog" id="worldIdentityForm">',
-          '<div class="world-dialog-head"><span>Player Access</span><button value="cancel" aria-label="Close">×</button></div>',
+          '<div class="world-dialog-head"><span>Player Access</span><button type="button" data-dialog-close aria-label="Close">×</button></div>',
           '<p>Enter your character access code to control your token on your turn.</p>',
           '<label><span>Character Code</span><input id="worldIdentityCode" type="password" autocomplete="current-password" placeholder="Character Name 712"></label>',
           '<p class="world-dialog-error" id="worldIdentityError"></p>',
-          '<div class="world-dialog-actions"><button value="cancel">View Only</button><button type="submit" class="primary">Connect Character</button></div>',
+          '<div class="world-dialog-actions"><button type="button" data-dialog-close>View Only</button><button type="submit" class="primary">Connect Character</button></div>',
         '</form>',
       '</dialog>',
 
       '<dialog class="world-dialog" id="worldDmAuthDialog">',
         '<form method="dialog" id="worldDmAuthForm">',
-          '<div class="world-dialog-head"><span>World Command Key</span><button value="cancel" aria-label="Close">×</button></div>',
+          '<div class="world-dialog-head"><span>World Command Key</span><button type="button" data-dialog-close aria-label="Close">×</button></div>',
           '<p>Authorize privileged map, token, and turn controls for this device.</p>',
           '<label><span>Command Key</span><input id="worldDmSecret" type="password" autocomplete="current-password"></label>',
           '<p class="world-dialog-error" id="worldDmAuthError"></p>',
-          '<div class="world-dialog-actions"><button value="cancel">Cancel</button><button type="submit" class="primary">Authorize</button></div>',
+          '<div class="world-dialog-actions"><button type="button" data-dialog-close>Cancel</button><button type="submit" class="primary">Authorize</button></div>',
         '</form>',
       '</dialog>',
 
@@ -405,6 +405,12 @@
     var identityButton = document.getElementById('worldIdentityBtn');
     var identityDialog = document.getElementById('worldIdentityDialog');
     var identityForm = document.getElementById('worldIdentityForm');
+    document.querySelectorAll('.world-dialog [data-dialog-close]').forEach(function(button){
+      button.addEventListener('click', function(){
+        var dialog = button.closest('dialog');
+        if (dialog) dialog.close();
+      });
+    });
     if (identityButton && identityDialog) {
       identityButton.addEventListener('click', function(){
         identityDialog.showModal();
