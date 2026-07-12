@@ -13,6 +13,7 @@
   var retryCount = 0;
   var refreshTimer = null;
   var refreshPromise = null;
+  var queuedRefreshReason = '';
 
   var store = {
     ready: false,
@@ -52,6 +53,7 @@
   // state cannot tear down DOM the user is interacting with.
   var interactionGuards = [];
   var lastTokenRevs = {};
+  var lastMapVersions = {};
 
   function registerGuard(fn){
     if (typeof fn === 'function') interactionGuards.push(fn);
@@ -175,6 +177,29 @@
     return merged;
   }
 
+  function mapVersion(row){
+    var value = Date.parse(row && row.updated_at || '');
+    return isFinite(value) ? value : 0;
+  }
+
+  function mergeMaps(fetched){
+    var previous = {};
+    store.maps.forEach(function(map){ previous[map.id] = map; });
+    var keep = {};
+    var merged = fetched.map(function(map){
+      var version = mapVersion(map);
+      var known = lastMapVersions[map.id] || 0;
+      keep[map.id] = true;
+      if (version < known && previous[map.id]) return previous[map.id];
+      lastMapVersions[map.id] = Math.max(known, version);
+      return map;
+    });
+    Object.keys(lastMapVersions).forEach(function(id){
+      if (!keep[id]) delete lastMapVersions[id];
+    });
+    return merged;
+  }
+
   // Applies a single authoritative token row (e.g. the PATCH response of a
   // move) without a full eight-table refetch.
   function applyTokenRow(row){
@@ -194,6 +219,23 @@
     emit('token-row');
   }
 
+  function applyMapRow(row){
+    if (!row || !row.id) return;
+    var version = mapVersion(row);
+    if (version < (lastMapVersions[row.id] || 0)) return;
+    lastMapVersions[row.id] = version;
+    var found = false;
+    for (var i = 0; i < store.maps.length; i += 1) {
+      if (store.maps[i].id === row.id) {
+        store.maps[i] = row;
+        found = true;
+        break;
+      }
+    }
+    if (!found) store.maps.push(row);
+    emit('map-row');
+  }
+
   function setConnection(connected, error){
     store.connected = !!connected;
     store.error = error ? String(error.message || error) : '';
@@ -201,7 +243,16 @@
   }
 
   async function refresh(reason){
-    if (refreshPromise) return refreshPromise;
+    if (refreshPromise) {
+      queuedRefreshReason = reason || queuedRefreshReason || 'queued';
+      var currentRefresh = refreshPromise;
+      return currentRefresh.then(function(){
+        var queued = queuedRefreshReason;
+        queuedRefreshReason = '';
+        if (queued) return refresh(queued);
+        return refreshPromise || store;
+      });
+    }
     // Defer (never drop) refreshes while the user is mid-interaction.
     if (store.ready && isInteracting()) {
       clearTimeout(refreshTimer);
@@ -229,7 +280,7 @@
       var turn = normalizeTurn(results[1] && results[1][0]);
       if (!store.ready || turn.rev >= store.turn.rev) store.turn = turn;
       store.assets = normalizeArray(results[2]);
-      store.maps = normalizeArray(results[3]);
+      store.maps = mergeMaps(normalizeArray(results[3]));
       store.tokens = mergeTokens(normalizeArray(results[4]));
       store.templates = normalizeArray(results[5]);
       store.defaults = normalizeArray(results[6]);
@@ -489,6 +540,7 @@
     activeToken: activeToken,
     moveToken: moveToken,
     applyTokenRow: applyTokenRow,
+    applyMapRow: applyMapRow,
     registerGuard: registerGuard,
     isInteracting: isInteracting,
     insertTemplate: insertTemplate,

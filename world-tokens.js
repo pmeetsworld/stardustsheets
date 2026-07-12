@@ -60,6 +60,18 @@
     return Math.max(28, root.grid.cell() * sizeMultiplier(token.size) - tokenInset());
   }
 
+  function snapTokenPoint(point, token){
+    var radius = tokenDiameter(token) / 2;
+    var size = root.board.dimensions();
+    var clamped = root.board.clampPoint(point, radius);
+    return root.grid.snap(clamped, sizeMultiplier(token.size), {
+      minX: radius,
+      maxX: size.width - radius,
+      minY: radius,
+      maxY: size.height - radius
+    });
+  }
+
   function stackKey(token){
     return Math.round(Number(token.x || 0) / 4) + ':' + Math.round(Number(token.y || 0) / 4);
   }
@@ -283,8 +295,7 @@
     drag = null;
     clearDragState(current, evt.pointerId);
     if (!current.lifted || !current.preview) return;
-    var point = root.grid.snap(current.preview);
-    point = root.board.clampPoint(point, tokenDiameter(current.token) / 2);
+    var point = snapTokenPoint(current.preview, current.token);
     // Use the freshest row from the store for the rev compare-and-swap; the
     // captured drag row may be stale if a sync arrived during the drag.
     var latest = tokenRow(current.id) || current.token;
@@ -310,7 +321,7 @@
         await api.rpc('world_delete_token', { p_secret: secret, p_token_id: token.id });
       } else {
         var size = root.board.dimensions();
-        var point = root.grid.snap({ x: size.width / 2, y: size.height / 2 });
+        var point = snapTokenPoint({ x: size.width / 2, y: size.height / 2 }, token);
         await api.rpc('world_update_token', {
           p_secret: secret,
           p_token_id: token.id,

@@ -2,6 +2,7 @@
   'use strict';
 
   var SUPABASE_JS_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.102.0/+esm';
+  var DEFAULT_CELL_PX = 35;
   var root = window.AEGIS_WORLD = window.AEGIS_WORLD || {};
   var api = root.api;
   var utils = null;
@@ -12,6 +13,7 @@
   var updateTimer = null;
   var renderPending = false;
   var lastSignature = '';
+  var gridDrafts = Object.create(null);
 
   function option(value, label, selected){
     return '<option value="' + utils.escapeHtml(value || '') + '"' + (selected ? ' selected' : '') + '>' + utils.escapeHtml(label) + '</option>';
@@ -90,6 +92,9 @@
 
   function renderDrawer(){
     var mapRow = activeMap();
+    var gridRow = mapRow && gridDrafts[mapRow.id]
+      ? Object.assign({}, mapRow, gridDrafts[mapRow.id])
+      : mapRow;
     var mapAssets = api.store.maps.map(function(map){
       var asset = api.store.assets.find(function(item){ return item.id === map.asset_id; });
       return option(map.id, map.title || (asset && assetName(asset)) || 'Map', map.id === api.store.world.active_map_id);
@@ -163,20 +168,20 @@
         mapRow ? [
           '<form id="worldGridForm" class="world-grid-form">',
             '<input type="hidden" name="id" value="' + utils.escapeHtml(mapRow.id) + '">',
-            '<label><span>Cell px</span><input name="cell_px" type="number" step="0.1" min="4" value="' + Number(mapRow.cell_px || 70) + '"></label>',
-            '<label><span>X offset</span><input name="offset_x" type="number" step="0.5" value="' + Number(mapRow.offset_x || 0) + '"></label>',
-            '<label><span>Y offset</span><input name="offset_y" type="number" step="0.5" value="' + Number(mapRow.offset_y || 0) + '"></label>',
-            '<label><span>Fine scale</span><input name="grid_scale" type="number" step="0.001" min="0.1" value="' + Number(mapRow.grid_scale || 1) + '"></label>',
-            '<label><span>Opacity</span><input name="grid_opacity" type="range" min="0" max="1" step="0.05" value="' + Number(mapRow.grid_opacity == null ? 0.5 : mapRow.grid_opacity) + '"></label>',
-            '<label><span>Color</span><input name="grid_color" type="color" value="' + utils.escapeHtml(mapRow.grid_color || '#7f99bd') + '"></label>',
+            '<label><span>Cell px</span><input name="cell_px" type="number" step="0.1" min="4" value="' + Number(gridRow.cell_px || DEFAULT_CELL_PX) + '"></label>',
+            '<label><span>X offset</span><input name="offset_x" type="number" step="0.5" value="' + Number(gridRow.offset_x || 0) + '"></label>',
+            '<label><span>Y offset</span><input name="offset_y" type="number" step="0.5" value="' + Number(gridRow.offset_y || 0) + '"></label>',
+            '<label><span>Fine scale</span><input name="grid_scale" type="number" step="0.001" min="0.1" value="' + Number(gridRow.grid_scale || 1) + '"></label>',
+            '<label><span>Opacity</span><input name="grid_opacity" type="range" min="0" max="1" step="0.05" value="' + Number(gridRow.grid_opacity == null ? 0.5 : gridRow.grid_opacity) + '"></label>',
+            '<label><span>Color</span><input name="grid_color" type="color" value="' + utils.escapeHtml(gridRow.grid_color || '#7f99bd') + '"></label>',
             '<label><span>Diagonal</span><select name="diagonal_rule">' +
-              option('five', '5 ft', mapRow.diagonal_rule === 'five') +
-              option('seven_five', '7.5 ft', mapRow.diagonal_rule === 'seven_five') +
-              option('alternating', '5 / 10 ft', mapRow.diagonal_rule === 'alternating') +
+              option('five', '5 ft', gridRow.diagonal_rule === 'five') +
+              option('seven_five', '7.5 ft', gridRow.diagonal_rule === 'seven_five') +
+              option('alternating', '5 / 10 ft', gridRow.diagonal_rule === 'alternating') +
             '</select></label>',
-            '<label><span>Feet / cell</span><input name="feet_per_cell" type="number" min="1" value="' + Number(mapRow.feet_per_cell || 5) + '"></label>',
-            '<label class="world-check"><input name="grid_visible" type="checkbox"' + (mapRow.grid_visible ? ' checked' : '') + '><span>Grid visible</span></label>',
-            '<label class="world-check"><input name="snap_enabled" type="checkbox"' + (mapRow.snap_enabled ? ' checked' : '') + '><span>Snap enabled</span></label>',
+            '<label><span>Feet / cell</span><input name="feet_per_cell" type="number" min="1" value="' + Number(gridRow.feet_per_cell || 5) + '"></label>',
+            '<label class="world-check"><input name="grid_visible" type="checkbox"' + (gridRow.grid_visible ? ' checked' : '') + '><span>Grid visible</span></label>',
+            '<label class="world-check"><input name="snap_enabled" type="checkbox"' + (gridRow.snap_enabled ? ' checked' : '') + '><span>Snap enabled</span></label>',
             '<button type="submit">Save Grid</button>',
           '</form>'
         ].join('') : '<p class="world-empty-copy">Activate a map to calibrate its square grid.</p>',
@@ -220,8 +225,13 @@
       if (openTokens[details.getAttribute('data-edit-token')]) details.open = true;
     });
     drawer.scrollTop = scrollTop;
-    // The form was rebuilt from store values; drop any stale preview.
-    if (root.grid && root.grid.clearPreview) root.grid.clearPreview();
+    if (root.grid) {
+      if (mapRow && gridDrafts[mapRow.id] && root.grid.setPreview) {
+        root.grid.setPreview(mapRow.id, gridDrafts[mapRow.id]);
+      } else if (root.grid.clearPreview) {
+        root.grid.clearPreview();
+      }
+    }
   }
 
   async function privileged(name, payload){
@@ -368,6 +378,7 @@
             asset_id: registered.asset.id,
             title: registered.asset.name,
             grid_type: 'square',
+            cell_px: DEFAULT_CELL_PX,
             diagonal_rule: 'seven_five'
           }
         });
@@ -388,8 +399,8 @@
   function previewGrid(form){
     if (!root.grid || !root.grid.setPreview) return;
     var opacity = Number(form.elements.grid_opacity.value);
-    root.grid.setPreview(form.elements.id.value, {
-      cell_px: Number(form.elements.cell_px.value) || 70,
+    var values = {
+      cell_px: Number(form.elements.cell_px.value) || DEFAULT_CELL_PX,
       offset_x: Number(form.elements.offset_x.value) || 0,
       offset_y: Number(form.elements.offset_y.value) || 0,
       grid_scale: Number(form.elements.grid_scale.value) || 1,
@@ -399,7 +410,9 @@
       snap_enabled: form.elements.snap_enabled.checked,
       feet_per_cell: Number(form.elements.feet_per_cell.value) || 5,
       diagonal_rule: form.elements.diagonal_rule.value
-    });
+    };
+    gridDrafts[form.elements.id.value] = values;
+    root.grid.setPreview(form.elements.id.value, values);
   }
 
   async function saveGrid(form){
@@ -419,10 +432,19 @@
       snap_enabled: form.elements.snap_enabled.checked
     };
     try {
-      await privileged('world_upsert_map', { p_payload: payload });
-      await api.refresh('grid-save');
+      var saved = await privileged('world_upsert_map', { p_payload: payload });
+      var savedMap = saved.result && saved.result.map;
+      if (savedMap && api.applyMapRow) {
+        api.applyMapRow(savedMap);
+      } else {
+        await api.refresh('grid-save');
+      }
+      delete gridDrafts[payload.id];
       if (root.grid && root.grid.clearPreview) root.grid.clearPreview();
       root.access.toast('Grid calibration saved', 'saved');
+      api.refresh('grid-save-confirm').catch(function(err){
+        console.warn('Grid confirmation refresh failed.', err);
+      });
     } catch (err) {
       root.access.toast(err.message || String(err), 'error');
     }

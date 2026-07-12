@@ -43,7 +43,7 @@ create table if not exists public.world_maps (
   title text not null default '',
   grid_type text not null default 'square'
     check (grid_type in ('square', 'hex_pointy', 'hex_flat')),
-  cell_px numeric not null default 70 check (cell_px > 0),
+  cell_px numeric not null default 35 check (cell_px > 0),
   offset_x numeric not null default 0,
   offset_y numeric not null default 0,
   grid_scale numeric not null default 1 check (grid_scale > 0),
@@ -502,7 +502,7 @@ begin
       (p_payload->>'asset_id')::uuid,
       coalesce(p_payload->>'title', ''),
       coalesce(p_payload->>'grid_type', 'square'),
-      coalesce(nullif(p_payload->>'cell_px', '')::numeric, 70),
+      coalesce(nullif(p_payload->>'cell_px', '')::numeric, 35),
       coalesce(nullif(p_payload->>'offset_x', '')::numeric, 0),
       coalesce(nullif(p_payload->>'offset_y', '')::numeric, 0),
       coalesce(nullif(p_payload->>'grid_scale', '')::numeric, 1),

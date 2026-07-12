@@ -3,6 +3,7 @@
 
   var root = window.AEGIS_WORLD = window.AEGIS_WORLD || {};
   var api = root.api;
+  var DEFAULT_CELL_PX = 35;
   var svg = null;
   var preview = null;   // uncommitted DM calibration values, local-only
 
@@ -15,8 +16,8 @@
   }
 
   function effectiveCell(mapRow){
-    if (!mapRow) return 70;
-    return Math.max(4, Number(mapRow.cell_px || 70) * Number(mapRow.grid_scale || 1));
+    if (!mapRow) return DEFAULT_CELL_PX;
+    return Math.max(4, Number(mapRow.cell_px || DEFAULT_CELL_PX) * Number(mapRow.grid_scale || 1));
   }
 
   function render(){
@@ -40,15 +41,30 @@
     svg.style.opacity = mapRow.grid_visible ? String(mapRow.grid_opacity == null ? 0.5 : mapRow.grid_opacity) : '0';
   }
 
-  function snap(point){
+  function snapAxis(value, origin, cell, min, max){
+    var index = Math.round((value - origin) / cell);
+    var minIndex = isFinite(min) ? Math.ceil((min - origin) / cell) : null;
+    var maxIndex = isFinite(max) ? Math.floor((max - origin) / cell) : null;
+    if (minIndex != null && maxIndex != null && minIndex > maxIndex) {
+      return Math.max(min, Math.min(max, value));
+    }
+    if (minIndex != null) index = Math.max(minIndex, index);
+    if (maxIndex != null) index = Math.min(maxIndex, index);
+    return origin + index * cell;
+  }
+
+  function snap(point, cellSpan, bounds){
     var mapRow = map();
     if (!mapRow || !mapRow.snap_enabled) return point;
     var cell = effectiveCell(mapRow);
     var ox = Number(mapRow.offset_x || 0);
     var oy = Number(mapRow.offset_y || 0);
+    var span = Math.max(1, Math.round(Number(cellSpan) || 1));
+    var centerOffset = span % 2 ? cell / 2 : 0;
+    bounds = bounds || {};
     return {
-      x: ox + (Math.round((point.x - ox - cell / 2) / cell) + 0.5) * cell,
-      y: oy + (Math.round((point.y - oy - cell / 2) / cell) + 0.5) * cell
+      x: snapAxis(point.x, ox + centerOffset, cell, bounds.minX, bounds.maxX),
+      y: snapAxis(point.y, oy + centerOffset, cell, bounds.minY, bounds.maxY)
     };
   }
 
