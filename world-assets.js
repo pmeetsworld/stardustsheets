@@ -167,7 +167,7 @@
         '<h3>Grid Calibration</h3>',
         mapRow ? [
           '<form id="worldGridForm" class="world-grid-form">',
-            '<input type="hidden" name="id" value="' + utils.escapeHtml(mapRow.id) + '">',
+            '<input type="hidden" name="map_id" value="' + utils.escapeHtml(mapRow.id) + '">',
             '<label><span>Cell px</span><input name="cell_px" type="number" step="0.1" min="4" value="' + Number(gridRow.cell_px || DEFAULT_CELL_PX) + '"></label>',
             '<label><span>X offset</span><input name="offset_x" type="number" step="0.5" value="' + Number(gridRow.offset_x || 0) + '"></label>',
             '<label><span>Y offset</span><input name="offset_y" type="number" step="0.5" value="' + Number(gridRow.offset_y || 0) + '"></label>',
@@ -411,14 +411,14 @@
       feet_per_cell: Number(form.elements.feet_per_cell.value) || 5,
       diagonal_rule: form.elements.diagonal_rule.value
     };
-    gridDrafts[form.elements.id.value] = values;
-    root.grid.setPreview(form.elements.id.value, values);
+    gridDrafts[form.elements.map_id.value] = values;
+    root.grid.setPreview(form.elements.map_id.value, values);
   }
 
   async function saveGrid(form){
     var data = new FormData(form);
     var payload = {
-      id: data.get('id'),
+      id: data.get('map_id'),
       grid_type: 'square',
       cell_px: data.get('cell_px'),
       offset_x: data.get('offset_x'),
@@ -601,9 +601,10 @@
     });
     drawer.addEventListener('submit', function(evt){
       evt.preventDefault();
-      if (evt.target.id === 'worldUploadForm') upload(evt.target);
-      if (evt.target.id === 'worldGridForm') saveGrid(evt.target);
-      if (evt.target.id === 'worldCustomTokenForm') addCustom(evt.target);
+      var formId = evt.target.getAttribute('id');
+      if (formId === 'worldUploadForm') upload(evt.target);
+      if (formId === 'worldGridForm') saveGrid(evt.target);
+      if (formId === 'worldCustomTokenForm') addCustom(evt.target);
     });
     drawer.addEventListener('change', function(evt){
       if (evt.target.matches('[data-default-character]')) assignDefault(evt.target);
