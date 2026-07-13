@@ -137,7 +137,7 @@
     element.setAttribute('aria-label', token.name || 'Token');
     element.style.width = diameter + 'px';
     element.style.height = diameter + 'px';
-    element.style.setProperty('--fan', fan || 'none');
+    element.style.setProperty('--fan', fan || 'translate(0px,0px)');
     // Never touch position or lift state of the token being dragged: the
     // drag preview owns left/top until the move commits on release.
     if (!dragging) {

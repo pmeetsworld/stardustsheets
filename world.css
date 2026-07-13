@@ -366,7 +366,7 @@ body.world-body{
   z-index:3;
   display:block;
   padding:0;
-  transform:translate(-50%,-50%) var(--fan, none);
+  transform:translate(-50%,-50%) var(--fan, translate(0,0));
   transform-origin:center;
   border:0;
   border-radius:50%;

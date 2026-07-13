@@ -60,4 +60,17 @@ assert.match(
   'duplicate combatants must refresh shared world state'
 );
 
+const worldCss = read('world.css');
+const tokens = read('world-tokens.js');
+assert.match(
+  worldCss,
+  /transform:translate\(-50%,-50%\) var\(--fan, translate\(0,0\)\)/,
+  'token coordinates must position the visual center, not the top-left corner'
+);
+assert.doesNotMatch(
+  tokens,
+  /setProperty\('--fan', fan \|\| 'none'\)/,
+  'the idle fan transform must remain a valid transform function'
+);
+
 console.log('app contract tests passed');
